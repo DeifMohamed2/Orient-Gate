@@ -241,6 +241,21 @@
             <div class="col-md-3"><span class="text-muted">معتمرين:</span> <strong><%= cs.passengerCount?.committed || 0 %></strong></div>
             <div class="col-md-3"><span class="text-muted">إجمالي ملتزم:</span> <strong><%= formatCurrency(cs.totalCostsCommitted ?? cs.totalCosts) %></strong></div>
           </div>
+          <% if (cs.byRoomType) { %>
+          <div class="overview-chip-row mt-3">
+            <% ['single','double','triple','quad'].forEach((rt) => {
+              const bucket = cs.byRoomType[rt];
+              if (!bucket || !bucket.count) return;
+            %>
+              <span class="overview-chip">
+                <%= bucket.count %> <%= roomTypeLabel(rt) %> → <%= formatCurrency(bucket.total) %>
+              </span>
+            <% }) %>
+            <% if (cs.vipCosts > 0) { %>
+              <span class="overview-chip">VIP → <%= formatCurrency(cs.vipCosts) %></span>
+            <% } %>
+          </div>
+          <% } %>
         </div>
         <% if (cs.hasPaidBookings && (cs.passengerCostsRealized || 0) !== (cs.passengerCostsCommitted || 0)) { %>
         <div class="overview-subsection mt-3 pt-3 border-top">

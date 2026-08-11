@@ -202,33 +202,97 @@ const getUnitCostBreakdown = (trip, hotels = [], rate) => {
   };
 };
 
+const emptyRoomTypeBucket = () => ({
+  count: 0,
+  visa: 0,
+  flight: 0,
+  accommodation: 0,
+  total: 0,
+});
+
+const createEmptyByRoomType = () => ({
+  single: emptyRoomTypeBucket(),
+  double: emptyRoomTypeBucket(),
+  triple: emptyRoomTypeBucket(),
+  quad: emptyRoomTypeBucket(),
+});
+
+const mergeByRoomType = (target, source) => {
+  const out = target || createEmptyByRoomType();
+  const src = source || {};
+  ['single', 'double', 'triple', 'quad'].forEach((rt) => {
+    const s = src[rt] || emptyRoomTypeBucket();
+    out[rt].count += s.count || 0;
+    out[rt].visa += s.visa || 0;
+    out[rt].flight += s.flight || 0;
+    out[rt].accommodation += s.accommodation || 0;
+    out[rt].total += s.total || 0;
+  });
+  return out;
+};
+
 const accumulatePassengerCosts = async (reservationList, trip, hotels, rate) => {
-  let passengerCosts = 0;
+  let membersTotal = 0;
+  let vipCosts = 0;
   let visaTotal = 0;
   let flightTotal = 0;
   let meccaTotal = 0;
   let medinaTotal = 0;
   let passengers = 0;
+  const byRoomType = createEmptyByRoomType();
+  const memberLines = [];
 
   for (const reservation of reservationList) {
     const cost = await getReservationCost(reservation, trip, hotels, rate);
-    passengerCosts += cost.total;
+    membersTotal += cost.membersTotal;
+    vipCosts += cost.vipCost;
     passengers += (reservation.members || []).length;
+
     for (const m of cost.memberBreakdowns) {
       visaTotal += m.visa;
       flightTotal += m.flight;
       meccaTotal += m.accommodationMecca;
       medinaTotal += m.accommodationMedina;
+
+      const roomType = ['single', 'double', 'triple', 'quad'].includes(m.roomType)
+        ? m.roomType
+        : 'double';
+      const bucket = byRoomType[roomType];
+      bucket.count += 1;
+      bucket.visa += m.visa;
+      bucket.flight += m.flight;
+      bucket.accommodation += m.accommodationTotal;
+      bucket.total += m.total;
+
+      memberLines.push({
+        reservationId: reservation._id,
+        reservationNumber: reservation.reservationNumber || '',
+        name: m.name || '—',
+        roomType,
+        visa: m.visa,
+        flight: m.flight,
+        accommodationMecca: m.accommodationMecca,
+        accommodationMedina: m.accommodationMedina,
+        accommodation: m.accommodationTotal,
+        total: m.total,
+      });
     }
   }
 
+  // passengerCosts = actual member costs + VIP (VIP shown separately in UI)
+  const passengerCosts = membersTotal + vipCosts;
+
   return {
     passengerCosts,
+    membersTotal,
+    vipCosts,
     visa: visaTotal,
     flight: flightTotal,
     accommodationMecca: meccaTotal,
     accommodationMedina: medinaTotal,
     passengers,
+    byRoomType,
+    memberLines,
   };
 };
 
@@ -332,7 +396,14 @@ const computeTripCostSummary = async (trip, hotels, reservations, expenses, rate
       committed: committed.passengers,
       realized: realized.passengers,
     },
+    // Quad reference for trip-form preview only — not finance "per pilgrim"
     unitCostPerPilgrim: unitCost,
+    byRoomType: committed.byRoomType,
+    byRoomTypeRealized: realized.byRoomType,
+    vipCosts: committed.vipCosts,
+    vipCostsRealized: realized.vipCosts,
+    membersTotal: committed.membersTotal,
+    memberLines: committed.memberLines,
     breakdown: {
       // Committed (primary) passenger breakdown
       visa: committed.visa,
@@ -342,6 +413,8 @@ const computeTripCostSummary = async (trip, hotels, reservations, expenses, rate
       passengerCosts: passengerCostsCommitted,
       passengerCostsCommitted,
       passengerCostsRealized,
+      membersTotal: committed.membersTotal,
+      vipCosts: committed.vipCosts,
       // Realized breakdown
       visaRealized: realized.visa,
       flightRealized: realized.flight,
@@ -379,12 +452,6 @@ const computeTripCostSummary = async (trip, hotels, reservations, expenses, rate
     profitPercentRealized,
     grossMarginOnBooked,
     grossMarginPercentOnBooked,
-    costPerPaidPassenger: realized.passengers
-      ? Math.round(passengerCostsRealized / realized.passengers)
-      : 0,
-    costPerCommittedPassenger: committed.passengers
-      ? Math.round(passengerCostsCommitted / committed.passengers)
-      : 0,
   };
 };
 
@@ -452,6 +519,8 @@ const sumCostSummaries = (costMap = {}) => {
     passengerCosts: 0,
     passengerCostsCommitted: 0,
     passengerCostsRealized: 0,
+    membersTotal: 0,
+    vipCosts: 0,
     tripLevelCosts: 0,
     tripLevelCostsSar: 0,
     tripCosts: 0,
@@ -478,8 +547,8 @@ const sumCostSummaries = (costMap = {}) => {
     visaSar: 0,
     visaEgpPortal: 0,
     visaAgentEgp: 0,
-    unitCostTotal: 0,
     exchangeRates: [],
+    byRoomType: createEmptyByRoomType(),
   };
 
   Object.values(costMap).forEach((cs) => {
@@ -488,6 +557,8 @@ const sumCostSummaries = (costMap = {}) => {
     totals.passengerCosts += b.passengerCostsCommitted ?? b.passengerCosts ?? 0;
     totals.passengerCostsCommitted += b.passengerCostsCommitted ?? b.passengerCosts ?? 0;
     totals.passengerCostsRealized += b.passengerCostsRealized || 0;
+    totals.membersTotal += cs.membersTotal || b.membersTotal || 0;
+    totals.vipCosts += cs.vipCosts || b.vipCosts || 0;
     totals.tripLevelCosts += b.tripLevelCosts || 0;
     totals.tripLevelCostsSar += b.tripLevelCostsSar || 0;
     totals.tripCosts += cs.tripCostsCommitted ?? cs.tripCosts ?? 0;
@@ -512,12 +583,10 @@ const sumCostSummaries = (costMap = {}) => {
     totals.passengersCommitted += cs.passengerCount?.committed || 0;
     totals.passengersRealized += cs.passengerCount?.realized || 0;
     if (cs.exchangeRate) totals.exchangeRates.push(cs.exchangeRate);
-    if (cs.unitCostPerPilgrim) {
-      totals.visaSar = cs.unitCostPerPilgrim.visaSar || totals.visaSar;
-      totals.visaEgpPortal = cs.unitCostPerPilgrim.visaEgpPortal || totals.visaEgpPortal;
-      totals.visaAgentEgp = cs.unitCostPerPilgrim.visaAgentEgp || totals.visaAgentEgp;
-      totals.unitCostTotal = cs.unitCostPerPilgrim.total || totals.unitCostTotal;
-    }
+    if (b.visaSar) totals.visaSar = b.visaSar;
+    if (b.visaEgpPortal) totals.visaEgpPortal = b.visaEgpPortal;
+    if (b.visaAgentEgp) totals.visaAgentEgp = b.visaAgentEgp;
+    mergeByRoomType(totals.byRoomType, cs.byRoomType);
   });
 
   return totals;
@@ -560,6 +629,8 @@ module.exports = {
   computeTripCostSummary,
   getAggregatedTripCosts,
   sumCostSummaries,
+  createEmptyByRoomType,
+  mergeByRoomType,
   hasCostsConfigured,
   getDefaultCostsFromSettings,
   getDefaultDeductionsFromSettings,

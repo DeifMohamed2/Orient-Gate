@@ -2998,11 +2998,58 @@ body {
 }
 
 .finance-pnl-subline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   padding: 4px 20px 8px 36px;
   font-size: 12px;
   color: var(--text-3);
   background: rgba(220, 38, 38, 0.02);
   border-bottom: 1px solid var(--border);
+}
+
+.finance-pnl-subline-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.finance-pnl-subline--muted {
+  opacity: 0.85;
+}
+
+.finance-room-type-chips {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+.finance-room-type-table {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.finance-room-type-table .table {
+  font-size: 12px;
+}
+
+.finance-member-cost-details summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--primary);
+}
+
+.finance-member-cost-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.finance-member-cost-table {
+  font-size: 12px;
+  max-height: 320px;
+  overflow: auto;
 }
 
 .finance-exchange-badge {

@@ -2,7 +2,16 @@
   if (pct < 0) return 'finance-margin-badge--danger';
   if (pct < 15) return 'finance-margin-badge--warn';
   return 'finance-margin-badge--ok';
-}; %>
+};
+const ROOM_TYPES_ORDER = ['single', 'double', 'triple', 'quad'];
+const formatRoomTypeChips = (byRoomType) => {
+  if (!byRoomType) return '';
+  return ROOM_TYPES_ORDER
+    .filter((rt) => (byRoomType[rt]?.count || 0) > 0)
+    .map((rt) => `${byRoomType[rt].count} ${roomTypeLabel(rt)}`)
+    .join(' · ');
+};
+%>
 
 <div class="finance-hub-header finance-enterprise-header">
   <div class="flex-grow-1 min-w-0">
@@ -160,11 +169,13 @@
     <div class="kpi-card kpi-card--icon">
       <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
       <div class="kpi-body">
-        <div class="kpi-label" title="تكلفة كل المعتمرين المحجوزين (ملتزمة) — تأشيرة + طيران + سكن">تكلفة المعتمرين</div>
+        <div class="kpi-label" title="تكلفة كل المعتمرين المحجوزين حسب نوع الغرفة الفعلي (فردي/دبل/ثلاثي/رباعي)">تكلفة المعتمرين</div>
         <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.passengerCosts) %></div>
-        <div class="kpi-hint finance-cost-unit-hint">
-          <% if (summary.totalPassengers) { %>
-            <%= summary.totalPassengers %> معتمر<% if (summary.costPerPassenger) { %> × <%= formatCurrency(summary.costPerPassenger) %><% } %>
+        <div class="kpi-hint finance-room-type-chips">
+          <% if (summary.totalPassengers && summary.byRoomType) { %>
+            <%= formatRoomTypeChips(summary.byRoomType) || (summary.totalPassengers + ' معتمر') %>
+          <% } else if (summary.totalPassengers) { %>
+            <%= summary.totalPassengers %> معتمر
           <% } else { %>
             لا حجوزات نشطة
           <% } %>
@@ -247,26 +258,31 @@
           <span class="finance-enterprise-pnl-label">(−) تكلفة المعتمرين (ملتزمة)</span>
           <span class="finance-enterprise-pnl-amount text-danger"><%= formatCurrency(summary.passengerCosts) %></span>
         </div>
-        <% if (summary.totalPassengers || summary.unitCostPerPilgrim) { %>
+        <% if (summary.byRoomType) { %>
+          <% ROOM_TYPES_ORDER.forEach((rt) => {
+            const bucket = summary.byRoomType[rt];
+            if (!bucket || !bucket.count) return;
+          %>
+          <div class="finance-pnl-subline">
+            <span><%= roomTypeLabel(rt) %> · <%= bucket.count %> معتمر</span>
+            <span class="finance-pnl-subline-amount"><%= formatCurrency(bucket.total) %></span>
+          </div>
+          <% }) %>
+        <% } %>
+        <% if (summary.vipCosts > 0) { %>
         <div class="finance-pnl-subline">
-          <span>
-            <% if (summary.totalPassengers) { %><%= summary.totalPassengers %> معتمر<% } %>
-            <% if (summary.costBreakdown) { %>
-              • تأشيرة <%= formatCurrency(summary.costBreakdown.visa) %>
-              • طيران <%= formatCurrency(summary.costBreakdown.flight) %>
-              • سكن <%= formatCurrency((summary.costBreakdown.accommodationMecca || 0) + (summary.costBreakdown.accommodationMedina || 0)) %>
-            <% } %>
-          </span>
-        </div>
-        <% if (summary.unitCostPerPilgrim && summary.unitCostPerPilgrim.visaSar) { %>
-        <div class="finance-pnl-subline">
-          <span class="finance-dual-currency">
-            الوكيل السعودي: <%= formatDualSarEgp(summary.unitCostPerPilgrim.visaSar, summary.exchangeRate, summary.unitCostPerPilgrim.visaAgentEgp) %>
-            <% if (summary.unitCostPerPilgrim.visaEgpPortal) { %> + بوابة <%= formatCurrency(summary.unitCostPerPilgrim.visaEgpPortal) %><% } %>
-            <span class="text-muted">(لكل معتمر: <%= formatCurrency(summary.unitCostPerPilgrim.total) %>)</span>
-          </span>
+          <span>إضافات VIP</span>
+          <span class="finance-pnl-subline-amount"><%= formatCurrency(summary.vipCosts) %></span>
         </div>
         <% } %>
+        <% if (summary.costBreakdown && (summary.costBreakdown.visa || summary.costBreakdown.flight)) { %>
+        <div class="finance-pnl-subline finance-pnl-subline--muted">
+          <span>
+            تأشيرة <%= formatCurrency(summary.costBreakdown.visa) %>
+            · طيران <%= formatCurrency(summary.costBreakdown.flight) %>
+            · سكن <%= formatCurrency((summary.costBreakdown.accommodationMecca || 0) + (summary.costBreakdown.accommodationMedina || 0)) %>
+          </span>
+        </div>
         <% } %>
         <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--deduct">
           <span class="finance-enterprise-pnl-label">(−) بدل مشرفين وتشغيل</span>
@@ -435,8 +451,8 @@
           </tr>
           <tr class="finance-trip-detail-row d-none" data-detail-for="<%= idx %>">
             <td colspan="11" class="finance-trip-detail-cell">
-              <div class="finance-trip-detail-grid">
-                <div><span class="text-muted">تأشيرة (ملتزمة):</span> <strong><%= formatCurrency(s.breakdown.visa) %></strong></div>
+              <div class="finance-trip-detail-grid mb-3">
+                <div><span class="text-muted">تأشيرة:</span> <strong><%= formatCurrency(s.breakdown.visa) %></strong></div>
                 <div><span class="text-muted">طيران:</span> <strong><%= formatCurrency(s.breakdown.flight) %></strong></div>
                 <div><span class="text-muted">سكن مكة:</span> <strong><%= formatCurrency(s.breakdown.accommodationMecca) %></strong></div>
                 <div><span class="text-muted">سكن المدينة:</span> <strong><%= formatCurrency(s.breakdown.accommodationMedina) %></strong></div>
@@ -450,39 +466,102 @@
                     <% } %>
                   </strong>
                 </div>
-                <div>
-                  <span class="text-muted">مساعد:</span>
-                  <strong class="finance-dual-currency">
-                    <% if (s.breakdown.assistantSar) { %>
-                      <%= formatDualSarEgp(s.breakdown.assistantSar, s.exchangeRate, s.breakdown.assistant) %>
-                    <% } else { %>
-                      <%= formatCurrency(s.breakdown.assistant) %>
-                    <% } %>
-                  </strong>
-                </div>
-                <div><span class="text-muted">تكلفة معتمرين:</span> <strong><%= formatCurrency(s.passengerCosts) %></strong>
-                  <% if (s.passengersCommitted && s.costPerPassenger) { %>
-                    <span class="finance-cost-unit-hint">(<%= s.passengersCommitted %> × <%= formatCurrency(s.costPerPassenger) %>)</span>
-                  <% } %>
-                </div>
                 <div><span class="text-muted">مصروفات:</span> <strong><%= formatCurrency(s.operationalExpenses) %></strong></div>
-                <% if (s.unitCostPerPilgrim && s.unitCostPerPilgrim.visaSar) { %>
-                <div class="col-span-all">
-                  <span class="text-muted">تكلفة الوحدة:</span>
-                  <strong class="finance-dual-currency">
-                    تأشيرة <%= formatDualSarEgp(s.unitCostPerPilgrim.visaSar, s.exchangeRate, s.unitCostPerPilgrim.visaAgentEgp) %>
-                    + بوابة <%= formatCurrency(s.unitCostPerPilgrim.visaEgpPortal) %>
-                    = <%= formatCurrency(s.unitCostPerPilgrim.total) %>/معتمر
-                  </strong>
-                </div>
-                <% } %>
-                <% if (s.passengerCostsRealized !== s.passengerCosts) { %>
-                <div class="col-span-all text-muted small">
-                  <i class="fa-solid fa-info-circle me-1"></i>
-                  تكلفة محققة (مدفوع فقط): <%= formatCurrency(s.passengerCostsRealized) %> — الملتزمة تشمل كل الحجوزات النشطة
-                </div>
-                <% } %>
               </div>
+
+              <% if (s.byRoomType) { %>
+              <div class="finance-room-type-table mb-3">
+                <div class="fw-semibold mb-2 small">تكلفة حسب نوع الغرفة</div>
+                <div class="table-responsive">
+                  <table class="table table-sm mb-0">
+                    <thead>
+                      <tr>
+                        <th>النوع</th>
+                        <th class="text-end">العدد</th>
+                        <th class="text-end">تأشيرة</th>
+                        <th class="text-end">طيران</th>
+                        <th class="text-end">سكن</th>
+                        <th class="text-end">الإجمالي</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% ROOM_TYPES_ORDER.forEach((rt) => {
+                        const bucket = s.byRoomType[rt];
+                        if (!bucket || !bucket.count) return;
+                      %>
+                      <tr>
+                        <td><%= roomTypeLabel(rt) %></td>
+                        <td class="text-end"><%= bucket.count %></td>
+                        <td class="text-end"><%= formatCurrency(bucket.visa) %></td>
+                        <td class="text-end"><%= formatCurrency(bucket.flight) %></td>
+                        <td class="text-end"><%= formatCurrency(bucket.accommodation) %></td>
+                        <td class="text-end fw-semibold"><%= formatCurrency(bucket.total) %></td>
+                      </tr>
+                      <% }) %>
+                      <% if (s.vipCosts > 0) { %>
+                      <tr>
+                        <td>VIP</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end fw-semibold"><%= formatCurrency(s.vipCosts) %></td>
+                      </tr>
+                      <% } %>
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td class="fw-bold">المجموع</td>
+                        <td class="text-end fw-bold"><%= s.passengersCommitted %></td>
+                        <td colspan="3"></td>
+                        <td class="text-end fw-bold text-danger"><%= formatCurrency(s.passengerCosts) %></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+              <% } %>
+
+              <% if (s.memberLines && s.memberLines.length) { %>
+              <details class="finance-member-cost-details">
+                <summary class="small fw-semibold cursor-pointer">تفاصيل المعتمرين (<%= s.memberLines.length %>)</summary>
+                <div class="table-responsive mt-2">
+                  <table class="table table-sm finance-member-cost-table mb-0">
+                    <thead>
+                      <tr>
+                        <th>الاسم</th>
+                        <th>الحجز</th>
+                        <th>الغرفة</th>
+                        <th class="text-end">تأشيرة</th>
+                        <th class="text-end">طيران</th>
+                        <th class="text-end">سكن</th>
+                        <th class="text-end">الإجمالي</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <% s.memberLines.forEach((m) => { %>
+                      <tr>
+                        <td><%= m.name %></td>
+                        <td class="text-muted small"><%= m.reservationNumber || '—' %></td>
+                        <td><%= roomTypeLabel(m.roomType) %></td>
+                        <td class="text-end"><%= formatCurrency(m.visa) %></td>
+                        <td class="text-end"><%= formatCurrency(m.flight) %></td>
+                        <td class="text-end"><%= formatCurrency(m.accommodation) %></td>
+                        <td class="text-end fw-semibold"><%= formatCurrency(m.total) %></td>
+                      </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+              <% } %>
+
+              <% if (s.passengerCostsRealized !== s.passengerCosts) { %>
+              <div class="text-muted small mt-2">
+                <i class="fa-solid fa-info-circle me-1"></i>
+                تكلفة محققة (مدفوع فقط): <%= formatCurrency(s.passengerCostsRealized) %> — الملتزمة تشمل كل الحجوزات النشطة
+              </div>
+              <% } %>
             </td>
           </tr>
         <% }) %>

@@ -18,6 +18,7 @@ const env = require('./config/env');
 const logger = require('./config/logger');
 const indexRoutes = require('./routes/indexRoutes');
 const errorHandler = require('./middleware/error');
+const AppError = require('./utils/AppError');
 const audit = require('./middleware/audit');
 const { formatDate, formatCurrency, formatSar, formatDualSarEgp, formatCostLine, statusLabel, roomTypeLabel, cityLabel, serviceLabel, packageStarsLabel, genderLabel, paymentMethodLabel, expenseCategoryLabel, departureLabel, seatUrgencyClass } = require('./utils/helpers');
 
@@ -55,7 +56,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(require('./middleware/digitNormalize'));
 app.use(cookieParser());
-app.use(methodOverride('_method'));
+app.use(methodOverride((req) => {
+  if (req.body && typeof req.body === 'object' && '_method' in req.body) {
+    const method = req.body._method;
+    delete req.body._method;
+    return method;
+  }
+}));
 
 const sessionStore = MongoStore.create({
   mongoUrl: env.mongoUri,
@@ -122,6 +129,9 @@ app.use((req, res, next) => {
 app.use(audit);
 
 app.use(indexRoutes);
+app.use((req, res, next) => {
+  next(new AppError('الصفحة المطلوبة غير موجودة', 404));
+});
 app.use(errorHandler);
 
 async function startServer() {

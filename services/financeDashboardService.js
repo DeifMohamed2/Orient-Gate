@@ -202,21 +202,14 @@ const getEnterpriseFinanceSummary = async (filters, tripSummaries = null) => {
     ? uniqueRates[0]
     : (uniqueRates[0] || null);
 
-  // Prefer unit cost from first configured trip in map
-  let unitCostPerPilgrim = null;
-  for (const cs of Object.values(costMap)) {
-    if (cs?.unitCostPerPilgrim?.total > 0) {
-      unitCostPerPilgrim = cs.unitCostPerPilgrim;
-      break;
-    }
-  }
-
   return {
     ...base,
     collectionRate,
     operationalExpenses,
     passengerCosts,
     passengerCostsRealized,
+    membersTotal: costTotals.membersTotal,
+    vipCosts: costTotals.vipCosts,
     tripLevelCosts,
     tripLevelCostsSar: costTotals.tripLevelCostsSar,
     supervisorSar: costTotals.supervisorSar,
@@ -233,12 +226,9 @@ const getEnterpriseFinanceSummary = async (filters, tripSummaries = null) => {
     grossMarginPercentOnBooked,
     totalPassengers: costTotals.passengersCommitted,
     passengersRealized: costTotals.passengersRealized,
-    costPerPassenger: costTotals.passengersCommitted
-      ? Math.round(passengerCosts / costTotals.passengersCommitted)
-      : (unitCostPerPilgrim?.total || 0),
     exchangeRate: primaryRate,
     exchangeRates: uniqueRates,
-    unitCostPerPilgrim,
+    byRoomType: costTotals.byRoomType,
     costBreakdown: {
       visa: costTotals.visa,
       flight: costTotals.flight,
@@ -252,6 +242,8 @@ const getEnterpriseFinanceSummary = async (filters, tripSummaries = null) => {
       visaSar: costTotals.visaSar,
       visaEgpPortal: costTotals.visaEgpPortal,
       visaAgentEgp: costTotals.visaAgentEgp,
+      membersTotal: costTotals.membersTotal,
+      vipCosts: costTotals.vipCosts,
       operationalExpenses,
     },
     netProfit: trueProfit,
@@ -365,6 +357,8 @@ const getTripSummaries = async (filters) => {
       operationalExpenses,
       passengerCosts,
       passengerCostsRealized,
+      membersTotal: cs.membersTotal || 0,
+      vipCosts: cs.vipCosts || 0,
       tripLevelCosts,
       tripLevelCostsSar: breakdown.tripLevelCostsSar || 0,
       supervisorSar: breakdown.supervisorSar || 0,
@@ -386,11 +380,9 @@ const getTripSummaries = async (filters) => {
       reservationStats: stats,
       passengersCommitted,
       passengersRealized: cs.passengerCount?.realized || 0,
-      costPerPassenger: passengersCommitted
-        ? Math.round(passengerCosts / passengersCommitted)
-        : (cs.unitCostPerPilgrim?.total || 0),
       exchangeRate: cs.exchangeRate || null,
-      unitCostPerPilgrim: cs.unitCostPerPilgrim || null,
+      byRoomType: cs.byRoomType || null,
+      memberLines: cs.memberLines || [],
       costsConfigured: cs.costsConfigured || false,
       hasPaidBookings: cs.hasPaidBookings || false,
       projectedTripCosts: cs.projectedTripCosts || 0,
@@ -409,6 +401,8 @@ const getTripSummaries = async (filters) => {
         visaAgentEgp: breakdown.visaAgentEgp || 0,
         passengerCosts,
         passengerCostsRealized,
+        membersTotal: cs.membersTotal || 0,
+        vipCosts: cs.vipCosts || 0,
         tripLevelCosts,
         operationalExpenses,
       },

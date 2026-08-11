@@ -14,7 +14,15 @@
     <span class="finance-summary-strip__item">
       <span>تكلفة معتمرين (ملتزمة)</span>
       <strong><%= formatCurrency(cs.passengerCostsCommitted ?? cs.breakdown.passengerCosts) %></strong>
-      <% if (cs.passengerCount?.committed) { %>
+      <% if (cs.byRoomType) { %>
+        <span class="text-muted small finance-room-type-chips">
+          <% const chips = ['single','double','triple','quad']
+            .filter((rt) => (cs.byRoomType[rt]?.count || 0) > 0)
+            .map((rt) => `${cs.byRoomType[rt].count} ${roomTypeLabel(rt)}`)
+            .join(' · '); %>
+          (<%= chips %>)
+        </span>
+      <% } else if (cs.passengerCount?.committed) { %>
         <span class="text-muted small">(<%= cs.passengerCount.committed %> معتمر)</span>
       <% } %>
     </span>
@@ -46,22 +54,28 @@
     <div class="col-md-3"><span class="text-muted">سكن المدينة:</span> <strong><%= formatCurrency(cs.breakdown.accommodationMedina) %></strong></div>
     <div class="col-md-3"><span class="text-muted">سعر الصرف:</span> <strong class="finance-exchange-badge"><%= cs.exchangeRate %> ج.م./ر.س</strong></div>
     <div class="col-md-3"><span class="text-muted">مصروفات تشغيلية:</span> <strong><%= formatCurrency(cs.breakdown.operationalExpenses) %></strong></div>
-    <% if (cs.unitCostPerPilgrim && cs.unitCostPerPilgrim.total) { %>
-    <div class="col-md-6">
-      <span class="text-muted">تكلفة الوحدة:</span>
-      <strong class="finance-dual-currency">
-        <% if (cs.unitCostPerPilgrim.visaSar) { %>
-          <%= formatDualSarEgp(cs.unitCostPerPilgrim.visaSar, cs.exchangeRate, cs.unitCostPerPilgrim.visaAgentEgp) %>
-          + بوابة <%= formatCurrency(cs.unitCostPerPilgrim.visaEgpPortal) %>
-        <% } %>
-        = <%= formatCurrency(cs.unitCostPerPilgrim.total) %>/معتمر
-      </strong>
-    </div>
-    <% } %>
     <% if (cs.grossMarginPercentOnBooked != null) { %>
     <div class="col-md-3"><span class="text-muted">هامش على المحجوز:</span> <strong><%= cs.grossMarginPercentOnBooked %>%</strong></div>
     <% } %>
+    <% if (cs.vipCosts > 0) { %>
+    <div class="col-md-3"><span class="text-muted">VIP:</span> <strong><%= formatCurrency(cs.vipCosts) %></strong></div>
+    <% } %>
   </div>
+  <% if (cs.byRoomType) { %>
+  <div class="finance-room-type-table mt-3">
+    <div class="fw-semibold mb-2 small">تكلفة حسب نوع الغرفة (فعلي لكل معتمر)</div>
+    <div class="d-flex flex-wrap gap-2 small">
+      <% ['single','double','triple','quad'].forEach((rt) => {
+        const bucket = cs.byRoomType[rt];
+        if (!bucket || !bucket.count) return;
+      %>
+        <span class="overview-chip">
+          <%= bucket.count %> <%= roomTypeLabel(rt) %> → <strong><%= formatCurrency(bucket.total) %></strong>
+        </span>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
 </details>
 <% } %>
 
