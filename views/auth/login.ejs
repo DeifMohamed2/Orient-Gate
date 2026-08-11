@@ -2,10 +2,14 @@
 <p class="auth-form-sub">أدخل بياناتك للوصول إلى لوحة التحكم</p>
 
 <% if (error) { %>
+<div class="auth-error" role="alert" id="authErrorBanner">
+  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+  <span><%= error %></span>
+</div>
 <script type="application/json" id="ogLoginError"><%- JSON.stringify(error) %></script>
 <% } %>
 
-<form method="POST" action="/auth/login" class="auth-form">
+<form method="POST" action="/auth/login" class="auth-form" id="authLoginForm">
   <div class="auth-field">
     <label for="identifier">البريد الإلكتروني أو رقم الهاتف</label>
     <input
@@ -23,5 +27,11 @@
     <label for="password">كلمة المرور</label>
     <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
   </div>
-  <button type="submit" class="auth-submit">دخول</button>
+  <button type="submit" class="auth-submit" id="authSubmitBtn">
+    <span class="auth-submit__label">دخول</span>
+    <span class="auth-submit__loading" hidden>
+      <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+      جاري تسجيل الدخول...
+    </span>
+  </button>
 </form>

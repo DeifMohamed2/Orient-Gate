@@ -11,6 +11,17 @@ const USER_MESSAGES = {
   500: 'حدث خطأ في الخادم — يرجى المحاولة لاحقاً',
 };
 
+const ASSET_404_RE = /\.(ico|png|jpe?g|gif|svg|webp|css|js|map|woff2?|ttf|eot|txt|webmanifest)$/i;
+
+const isAssetLikeRequest = (req) => {
+  const path = req.path || '';
+  return path === '/favicon.ico'
+    || path === '/robots.txt'
+    || path === '/apple-touch-icon.png'
+    || path === '/apple-touch-icon-precomposed.png'
+    || ASSET_404_RE.test(path);
+};
+
 /** Session/flash may be missing when the store (MongoDB) fails before connect-flash runs. */
 const safeFlash = (req, type, message) => {
   if (typeof req.flash === 'function') {
@@ -19,6 +30,9 @@ const safeFlash = (req, type, message) => {
 };
 
 const flashErrorMessages = (req, err, message) => {
+  // Never queue 404s into flash — browsers poll favicon/assets and spam toasts on the next page.
+  if (err.statusCode === 404) return;
+
   const validationMessages = err.details?.validationMessages;
   if (validationMessages?.length) {
     validationMessages.forEach((m) => safeFlash(req, 'error', m));
@@ -64,6 +78,11 @@ const errorHandler = (err, req, res, next) => {
 
   if (isAppError) {
     flashErrorMessages(req, err, userMessage);
+
+    // Quiet 404 for browsers probing missing favicons/static files — no HTML error page, no flash.
+    if (statusCode === 404 && isAssetLikeRequest(req)) {
+      return res.status(404).end();
+    }
 
     if (req.session && req.method !== 'GET' && /\/trips(\/|$)/.test(req.originalUrl) && req.body && Object.keys(req.body).length) {
       req.session.tripFormDraft = {

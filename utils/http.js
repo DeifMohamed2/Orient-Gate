@@ -41,8 +41,9 @@ const getSafeRedirectUrl = (req) => {
   if (path.includes('/customers')) return '/customers';
   if (path.includes('/supervisors')) return '/supervisors';
   if (path.includes('/brokers')) return '/brokers';
+  if (path.includes('/auth')) return '/auth/login';
   if (req.user) return getHomePath(req.user);
-  return '/dashboard';
+  return '/auth/login';
 };
 
 module.exports = { wantsJsonResponse, isHtmlFormSubmission, getSafeRedirectUrl };

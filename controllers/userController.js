@@ -98,12 +98,20 @@ const editForm = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const data = parseUserBody(req.body);
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { ...data, updatedBy: req.user._id },
-      { new: true, runValidators: true }
-    );
+    const user = await User.findById(req.params.id).select('+password');
     if (!user) throw new AppError('المستخدم غير موجود', 404);
+
+    user.name = data.name;
+    user.email = data.email;
+    user.role = data.role;
+    user.phone = data.phone;
+    user.isActive = data.isActive;
+    user.updatedBy = req.user._id;
+    if (data.password) {
+      user.password = data.password; // hashed by User pre-save hook
+    }
+
+    await user.save();
     req.flash('success', 'تم تحديث المستخدم');
     res.redirect('/users');
   } catch (error) {

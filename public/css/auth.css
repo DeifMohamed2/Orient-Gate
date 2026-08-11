@@ -136,9 +136,42 @@
   color: #fff;
   cursor: pointer;
   margin-top: 8px;
-  transition: background 0.15s;
+  transition: background 0.15s, opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
 }
 .auth-submit:hover { background: var(--primary-strong); }
+.auth-submit:disabled,
+.auth-submit.is-loading {
+  cursor: wait;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.auth-submit__loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+}
+.auth-error i {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
 [data-theme='dark'] .auth-body {
   background: #0c1017;
 }
@@ -173,12 +206,6 @@
 [data-theme='dark'] .auth-error {
   background: rgba(248, 113, 113, 0.14);
   color: #f87171;
+  border-color: rgba(248, 113, 113, 0.28);
 }
-.auth-error {
-  background: var(--danger-soft);
-  color: var(--danger);
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
+
