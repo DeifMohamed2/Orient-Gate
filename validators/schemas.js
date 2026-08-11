@@ -3,7 +3,11 @@ const { ROOM_TYPES, GROUP_TYPES, CUSTOMER_TYPES, TRIP_STATUSES, HOTEL_STARS, CIT
 const { optionalNumber, flexibleCostMap } = require('./joiHelpers');
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required().messages({ 'any.required': 'البريد الإلكتروني مطلوب' }),
+  identifier: Joi.string().trim().min(3).required().messages({
+    'any.required': 'البريد الإلكتروني أو رقم الهاتف مطلوب',
+    'string.empty': 'البريد الإلكتروني أو رقم الهاتف مطلوب',
+    'string.min': 'البريد الإلكتروني أو رقم الهاتف مطلوب',
+  }),
   password: Joi.string().required().messages({ 'any.required': 'كلمة المرور مطلوبة' }),
 });
 
