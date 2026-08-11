@@ -40,7 +40,7 @@
       <span>إجمالي التكلفة</span>
       <strong><%= formatCurrency(cs.totalCostsCommitted ?? cs.totalCosts) %></strong>
     </span>
-    <% if ((cs.passengerCostsRealized || 0) !== (cs.passengerCostsCommitted ?? cs.breakdown.passengerCosts || 0)) { %>
+    <% if ((cs.passengerCostsRealized || 0) !== ((cs.passengerCostsCommitted ?? cs.breakdown.passengerCosts) || 0)) { %>
     <span class="finance-summary-strip__item text-muted small">
       محققة (مدفوع): <strong><%= formatCurrency(cs.passengerCostsRealized || 0) %></strong>
     </span>
