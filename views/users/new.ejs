@@ -2,7 +2,7 @@
 <div class="card">
   <div class="card-body">
     <form method="POST" action="/users">
-      <%- include('_user-form', { user, roleList, roleLabel }) %>
+      <%- include('_user-form', { formUser, roleList, roleLabel }) %>
       <div class="d-flex gap-2 mt-4">
         <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i> إنشاء</button>
         <a href="/users" class="btn btn-outline-primary">إلغاء</a>

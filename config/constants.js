@@ -3,11 +3,21 @@ const ROLES = {
   OPERATIONS: 'operations',
   SALES: 'sales',
   FINANCE: 'finance',
+  // legacy — kept for existing DB users; not assignable in UI
   VISA: 'visa',
   TRANSPORT: 'transport',
   CUSTOMER_SERVICE: 'customer_service',
   MANAGER: 'manager',
 };
+
+/** Roles shown when creating/editing users */
+const ASSIGNABLE_ROLES = [
+  ROLES.ADMIN,
+  ROLES.MANAGER,
+  ROLES.OPERATIONS,
+  ROLES.SALES,
+  ROLES.FINANCE,
+];
 
 const PERMISSIONS = {
   TRIPS_VIEW: 'trips:view',
@@ -30,6 +40,7 @@ const PERMISSIONS = {
 
 const ROLE_PERMISSIONS = {
   [ROLES.ADMIN]: Object.values(PERMISSIONS),
+  // المالية: فقط admin و finance — مدير العمليات لا يرى الربح/التكاليف
   [ROLES.MANAGER]: [
     PERMISSIONS.DASHBOARD_VIEW,
     PERMISSIONS.TRIPS_VIEW,
@@ -42,8 +53,6 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.RESERVATIONS_CANCEL,
     PERMISSIONS.CUSTOMERS_VIEW,
     PERMISSIONS.BROKERS_VIEW,
-    PERMISSIONS.FINANCE_VIEW,
-    PERMISSIONS.FINANCE_MANAGE,
     PERMISSIONS.REPORTS_VIEW,
   ],
   [ROLES.OPERATIONS]: [
@@ -71,23 +80,6 @@ const ROLE_PERMISSIONS = {
     PERMISSIONS.FINANCE_MANAGE,
     PERMISSIONS.REPORTS_VIEW,
   ],
-  [ROLES.VISA]: [
-    PERMISSIONS.DASHBOARD_VIEW,
-    PERMISSIONS.RESERVATIONS_VIEW,
-    PERMISSIONS.TRIPS_VIEW,
-  ],
-  [ROLES.TRANSPORT]: [
-    PERMISSIONS.DASHBOARD_VIEW,
-    PERMISSIONS.RESERVATIONS_VIEW,
-    PERMISSIONS.TRIPS_VIEW,
-  ],
-  [ROLES.CUSTOMER_SERVICE]: [
-    PERMISSIONS.DASHBOARD_VIEW,
-    PERMISSIONS.RESERVATIONS_VIEW,
-    PERMISSIONS.RESERVATIONS_EDIT,
-    PERMISSIONS.CUSTOMERS_VIEW,
-    PERMISSIONS.TRIPS_VIEW,
-  ],
 };
 
 const ROOM_TYPES = ['single', 'double', 'triple', 'quad'];
@@ -102,6 +94,7 @@ const CITIES = ['mecca', 'medina'];
 
 module.exports = {
   ROLES,
+  ASSIGNABLE_ROLES,
   PERMISSIONS,
   ROLE_PERMISSIONS,
   ROOM_TYPES,

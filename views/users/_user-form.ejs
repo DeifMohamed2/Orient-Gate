@@ -1,15 +1,15 @@
-<% const isEdit = typeof user._id !== 'undefined' && user._id; %>
+<% const isEdit = typeof formUser._id !== 'undefined' && formUser._id; %>
 
 <div class="form-section">
   <h3 class="form-section-title"><i class="fa-solid fa-user me-2 text-primary"></i>بيانات الحساب</h3>
   <div class="row g-3">
     <div class="col-md-6">
       <label class="form-label">الاسم <span class="text-danger">*</span></label>
-      <input class="form-control" name="name" value="<%= user.name || '' %>" required>
+      <input class="form-control" name="name" value="<%= formUser.name || '' %>" required>
     </div>
     <div class="col-md-6">
       <label class="form-label">البريد الإلكتروني <span class="text-danger">*</span></label>
-      <input type="email" class="form-control" name="email" value="<%= user.email || '' %>" required autocomplete="off">
+      <input type="email" class="form-control" name="email" value="<%= formUser.email || '' %>" required autocomplete="off">
     </div>
     <div class="col-md-6">
       <label class="form-label"><%= isEdit ? 'كلمة مرور جديدة (اختياري)' : 'كلمة المرور' %><% if (!isEdit) { %> <span class="text-danger">*</span><% } %></label>
@@ -17,20 +17,20 @@
     </div>
     <div class="col-md-6">
       <label class="form-label">الهاتف</label>
-      <input class="form-control" name="phone" value="<%= user.phone || '' %>" placeholder="01xxxxxxxxx">
+      <input class="form-control" name="phone" value="<%= formUser.phone || '' %>" placeholder="01xxxxxxxxx">
     </div>
     <div class="col-md-6">
       <label class="form-label">الدور <span class="text-danger">*</span></label>
       <select name="role" class="form-select" required>
         <% roleList.forEach(r => { %>
-          <option value="<%= r %>" <%= user.role === r ? 'selected' : '' %>><%= roleLabel(r) %></option>
+          <option value="<%= r %>" <%= formUser.role === r ? 'selected' : '' %>><%= roleLabel(r) %></option>
         <% }) %>
       </select>
     </div>
     <% if (isEdit) { %>
     <div class="col-md-6">
       <label class="form-check-label d-block mt-4">
-        <input type="checkbox" class="form-check-input me-2" name="isActive" value="true" <%= user.isActive ? 'checked' : '' %>>
+        <input type="checkbox" class="form-check-input me-2" name="isActive" value="true" <%= formUser.isActive ? 'checked' : '' %>>
         الحساب نشط
       </label>
     </div>
@@ -42,9 +42,9 @@
 <div class="form-section">
   <h3 class="form-section-title"><i class="fa-solid fa-clock me-2 text-primary"></i>معلومات الجلسة</h3>
   <ul class="detail-list">
-    <li><span>آخر دخول</span><strong><%= user.lastLogin ? formatDate(user.lastLogin) : 'لم يسجل دخول بعد' %></strong></li>
-    <li><span>تاريخ الإنشاء</span><strong><%= formatDate(user.createdAt) %></strong></li>
-    <li><span>آخر تحديث</span><strong><%= user.updatedAt ? formatDate(user.updatedAt) : '—' %></strong></li>
+    <li><span>آخر دخول</span><strong><%= formUser.lastLogin ? formatDate(formUser.lastLogin) : 'لم يسجل دخول بعد' %></strong></li>
+    <li><span>تاريخ الإنشاء</span><strong><%= formatDate(formUser.createdAt) %></strong></li>
+    <li><span>آخر تحديث</span><strong><%= formUser.updatedAt ? formatDate(formUser.updatedAt) : '—' %></strong></li>
   </ul>
 </div>
 <% } %>

@@ -33,9 +33,6 @@ const ROLE_USERS = [
   { name: 'مسئول العمليات', email: 'ops@orientgate.com', password: 'Ops@123', role: ROLES.OPERATIONS, phone: '01000000002' },
   { name: 'مسئول الحجز', email: 'sales@orientgate.com', password: 'Sales@123', role: ROLES.SALES, phone: '01000000003' },
   { name: 'محاسب المالية', email: 'finance@orientgate.com', password: 'Finance@123', role: ROLES.FINANCE, phone: '01000000004' },
-  { name: 'مسئول التأشيرات', email: 'visa@orientgate.com', password: 'Visa@123', role: ROLES.VISA, phone: '01000000005' },
-  { name: 'مسئول النقل', email: 'transport@orientgate.com', password: 'Transport@123', role: ROLES.TRANSPORT, phone: '01000000006' },
-  { name: 'خدمة العملاء', email: 'cs@orientgate.com', password: 'Cs@123', role: ROLES.CUSTOMER_SERVICE, phone: '01000000007' },
 ];
 
 const createRoomsForHotel = (tripId, hotelId, configs, userId) => {

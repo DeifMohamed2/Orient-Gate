@@ -1,5 +1,5 @@
 <% 
-  const u = typeof user !== 'undefined' && user ? user : (typeof currentUser !== 'undefined' ? currentUser : null);
+  const u = typeof currentUser !== 'undefined' && currentUser ? currentUser : null;
   let initials = 'م';
   if (u) {
     const a = (u.name && u.name[0]) || (u.email && u.email[0]) || '?';

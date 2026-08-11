@@ -1,10 +1,11 @@
 const User = require('../models/User');
-const { ROLES } = require('../config/constants');
+const { ASSIGNABLE_ROLES } = require('../config/constants');
 const { roleLabel } = require('../utils/helpers');
+const AppError = require('../utils/AppError');
 
 const PAGE_SIZE = 25;
 const EXPORT_LIMIT = 5000;
-const ROLE_LIST = Object.values(ROLES);
+const ROLE_LIST = ASSIGNABLE_ROLES;
 
 const csvEscape = (val) => {
   const str = val == null ? '' : String(val);
@@ -137,6 +138,9 @@ const exportUsersCsv = async (rawQuery, { all = false } = {}) => {
 };
 
 const parseUserBody = (body) => {
+  if (!ASSIGNABLE_ROLES.includes(body.role)) {
+    throw new AppError('الدور المحدد غير مسموح', 400);
+  }
   const data = {
     name: body.name,
     email: body.email,

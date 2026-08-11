@@ -85,7 +85,9 @@
         <div class="card chart-card trip-hub-chart-card">
           <div class="card-header d-flex justify-content-between align-items-center">
             <span>الإيرادات والتحصيل</span>
+            <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission && currentUser.hasPermission('finance:view')) { %>
             <a href="/trips/<%= trip._id %>?tab=finance" class="btn btn-sm btn-outline-primary">تفاصيل المالية</a>
+            <% } %>
           </div>
           <div class="card-body"><div id="tripHubRevenueChart" class="chart-mount"></div></div>
         </div>
@@ -375,7 +377,9 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between">
             <span>آخر المدفوعات</span>
+            <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission && currentUser.hasPermission('finance:view')) { %>
             <a href="/trips/<%= trip._id %>?tab=finance" class="small">عرض الكل</a>
+            <% } %>
           </div>
           <div class="card-body p-0">
             <ul class="trip-hub-mini-list">

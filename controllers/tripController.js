@@ -19,7 +19,7 @@ const {
   consumeSessionFormDraft,
 } = require('../utils/tripHelpers');
 const {
-  HOTEL_STARS, ROOM_TYPES, CITIES,
+  HOTEL_STARS, ROOM_TYPES, CITIES, PERMISSIONS,
 } = require('../config/constants');
 const { buildTripFilter, buildTripCards, hasActiveFilters } = require('../services/dashboardAnalyticsService');
 const { listActive, syncTripVipItemsToCatalog } = require('../services/vipServiceService');
@@ -121,6 +121,10 @@ const show = async (req, res, next) => {
     const rawTab = req.query.tab;
     if (rawTab === 'visa' || rawTab === 'transport') {
       return res.redirect(`/trips/${req.params.id}?tab=operations&ops=${rawTab}`);
+    }
+
+    if (rawTab === 'finance' && !req.user?.hasPermission(PERMISSIONS.FINANCE_VIEW)) {
+      throw new AppError('ليس لديك صلاحية للوصول إلى المالية', 403);
     }
 
     const data = await getTripHubData(req.params.id, {

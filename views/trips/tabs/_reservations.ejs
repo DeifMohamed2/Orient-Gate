@@ -59,7 +59,7 @@
               <td><%- include('../../partials/badge', { status: r.paymentStatus }) %></td>
               <td>
                 <a href="/reservations/<%= r._id %>" class="btn btn-icon btn-sm" title="عرض"><i class="fa-solid fa-eye"></i></a>
-                <% if (balance > 0) { %>
+                <% if (balance > 0 && typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission && currentUser.hasPermission('finance:manage')) { %>
                   <a href="/trips/<%= trip._id %>?tab=finance" class="btn btn-outline-primary btn-sm">تحصيل</a>
                 <% } %>
               </td>

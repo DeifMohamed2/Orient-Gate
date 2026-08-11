@@ -11,12 +11,14 @@
     <i class="fa-solid fa-bed me-1"></i> التسكين
     <span class="trip-hub-tab-badge"><%= tabBadges.accommodation %></span>
   </a>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission && currentUser.hasPermission('finance:view')) { %>
   <a href="<%= baseUrl %>?tab=finance" class="nav-link <%= activeTab === 'finance' ? 'active' : '' %>">
     <i class="fa-solid fa-wallet me-1"></i> المالية
     <% if (tabBadges.finance > 0) { %>
       <span class="trip-hub-tab-badge trip-hub-tab-badge--warn"><%= Math.round(tabBadges.finance).toLocaleString('ar-EG') %></span>
     <% } %>
   </a>
+  <% } %>
   <a href="<%= baseUrl %>?tab=operations&ops=visa" class="nav-link <%= activeTab === 'operations' ? 'active' : '' %>">
     <i class="fa-solid fa-clipboard-list me-1"></i> العمليات
     <% if (tabBadges.operations > 0) { %>

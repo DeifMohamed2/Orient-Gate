@@ -57,7 +57,7 @@ const exportCsv = async (req, res, next) => {
 const newForm = (req, res) => {
   res.render('users/new', {
     title: 'مستخدم جديد',
-    user: {},
+    formUser: {},
     roles: ROLES,
     roleList: ROLE_LIST,
     roleLabel,
@@ -83,7 +83,7 @@ const editForm = async (req, res, next) => {
     if (!user) throw new AppError('المستخدم غير موجود', 404);
     res.render('users/edit', {
       title: 'تعديل المستخدم',
-      user,
+      formUser: user,
       roles: ROLES,
       roleList: ROLE_LIST,
       roleLabel,
