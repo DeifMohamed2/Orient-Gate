@@ -151,51 +151,77 @@
     </div>
   </div>
 
-  <div class="finance-kpi-row-label mt-3"><i class="fa-solid fa-coins me-1"></i> التكاليف والربحية</div>
+  <div class="finance-kpi-row-label mt-3"><i class="fa-solid fa-coins me-1"></i> التكاليف والربحية
+    <% if (summary.exchangeRate) { %>
+      <span class="finance-exchange-badge" title="سعر صرف الرحلة">سعر الصرف: <%= summary.exchangeRate %> ج.م./ر.س</span>
+    <% } %>
+  </div>
   <div class="kpi-grid kpi-grid-compact finance-kpi-row">
     <div class="kpi-card kpi-card--icon">
       <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
       <div class="kpi-body">
-        <div class="kpi-label" title="تكلفة المعتمرين من trip.costs (تأشيرة + طيران + سكن)">تكلفة الرحلات</div>
-        <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.tripCosts) %></div>
-        <div class="kpi-hint">معتمرين + مشرفين</div>
+        <div class="kpi-label" title="تكلفة كل المعتمرين المحجوزين (ملتزمة) — تأشيرة + طيران + سكن">تكلفة المعتمرين</div>
+        <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.passengerCosts) %></div>
+        <div class="kpi-hint finance-cost-unit-hint">
+          <% if (summary.totalPassengers) { %>
+            <%= summary.totalPassengers %> معتمر<% if (summary.costPerPassenger) { %> × <%= formatCurrency(summary.costPerPassenger) %><% } %>
+          <% } else { %>
+            لا حجوزات نشطة
+          <% } %>
+        </div>
       </div>
     </div>
     <div class="kpi-card kpi-card--icon">
-      <div class="kpi-icon"><i class="fa-solid fa-receipt"></i></div>
+      <div class="kpi-icon"><i class="fa-solid fa-user-tie"></i></div>
       <div class="kpi-body">
-        <div class="kpi-label" title="مصروفات تشغيلية مسجلة">مصروفات تشغيلية</div>
-        <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.operationalExpenses) %></div>
+        <div class="kpi-label" title="بدل المشرفين بالريال محوّل بسعر صرف الرحلة">بدل مشرفين</div>
+        <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.tripLevelCosts) %></div>
+        <% if (summary.tripLevelCostsSar) { %>
+          <div class="kpi-hint finance-dual-currency"><%= formatDualSarEgp(summary.tripLevelCostsSar, summary.exchangeRate, summary.tripLevelCosts) %></div>
+        <% } %>
       </div>
     </div>
     <div class="kpi-card kpi-card--icon">
       <div class="kpi-icon"><i class="fa-solid fa-calculator"></i></div>
       <div class="kpi-body">
-        <div class="kpi-label" title="تكلفة الرحلات + مصروفات تشغيلية">إجمالي التكلفة</div>
+        <div class="kpi-label" title="تكلفة المعتمرين + بدل مشرفين + مصروفات">إجمالي تكلفة الرحلة</div>
         <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.totalCosts) %></div>
+        <div class="kpi-hint">معتمرين + مشرفين + مصروفات</div>
       </div>
     </div>
     <div class="kpi-card kpi-card--icon kpi-card--highlight">
       <div class="kpi-icon"><i class="fa-solid fa-chart-pie"></i></div>
       <div class="kpi-body">
-        <div class="kpi-label" title="المحصل − إجمالي التكلفة (يشمل تكلفة الرحلات)">صافي الربح الحقيقي</div>
+        <div class="kpi-label" title="المحصل − إجمالي التكلفة الملتزمة">صافي الربح الحقيقي</div>
         <div class="kpi-value kpi-value-sm <%= summary.trueProfit < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(summary.trueProfit) %></div>
       </div>
     </div>
     <div class="kpi-card kpi-card--icon">
       <div class="kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
       <div class="kpi-body">
-        <div class="kpi-label" title="صافي الربح ÷ المحصل">هامش الربح</div>
-        <div class="kpi-value kpi-value-sm"><span class="finance-margin-badge <%= marginClass(summary.marginPercent) %>"><%= summary.marginPercent %>%</span></div>
+        <div class="kpi-label" title="(إيرادات محجوزة − إجمالي التكلفة) ÷ الإيرادات المحجوزة">هامش على المحجوز</div>
+        <div class="kpi-value kpi-value-sm"><span class="finance-margin-badge <%= marginClass(summary.grossMarginPercentOnBooked) %>"><%= summary.grossMarginPercentOnBooked %>%</span></div>
+        <div class="kpi-hint"><%= formatCurrency(summary.grossMarginOnBooked) %></div>
       </div>
     </div>
+    <% if (summary.passengerCostsRealized !== summary.passengerCosts) { %>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-check-double"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="تكلفة المعتمرين المدفوعين بالكامل فقط">تكلفة محققة</div>
+        <div class="kpi-value kpi-value-sm text-muted"><%= formatCurrency(summary.passengerCostsRealized) %></div>
+        <div class="kpi-hint"><%= summary.passengersRealized || 0 %> معتمر مدفوع</div>
+      </div>
+    </div>
+    <% } else { %>
     <div class="kpi-card kpi-card--icon">
       <div class="kpi-icon"><i class="fa-solid fa-wallet"></i></div>
       <div class="kpi-body">
-        <div class="kpi-label" title="المحصل − مصروفات تشغيلية فقط (بدون تكلفة الرحلات)">الربح النقدي</div>
+        <div class="kpi-label" title="المحصل − مصروفات تشغيلية فقط">الربح النقدي</div>
         <div class="kpi-value kpi-value-sm <%= summary.cashProfit < 0 ? 'text-danger' : '' %>"><%= formatCurrency(summary.cashProfit) %></div>
       </div>
     </div>
+    <% } %>
   </div>
 </div>
 
@@ -218,12 +244,39 @@
         </div>
         <div class="finance-enterprise-pnl-divider"></div>
         <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--deduct">
-          <span class="finance-enterprise-pnl-label">(−) تكلفة المعتمرين (تأشيرة + طيران + سكن)</span>
+          <span class="finance-enterprise-pnl-label">(−) تكلفة المعتمرين (ملتزمة)</span>
           <span class="finance-enterprise-pnl-amount text-danger"><%= formatCurrency(summary.passengerCosts) %></span>
         </div>
+        <% if (summary.totalPassengers || summary.unitCostPerPilgrim) { %>
+        <div class="finance-pnl-subline">
+          <span>
+            <% if (summary.totalPassengers) { %><%= summary.totalPassengers %> معتمر<% } %>
+            <% if (summary.costBreakdown) { %>
+              • تأشيرة <%= formatCurrency(summary.costBreakdown.visa) %>
+              • طيران <%= formatCurrency(summary.costBreakdown.flight) %>
+              • سكن <%= formatCurrency((summary.costBreakdown.accommodationMecca || 0) + (summary.costBreakdown.accommodationMedina || 0)) %>
+            <% } %>
+          </span>
+        </div>
+        <% if (summary.unitCostPerPilgrim && summary.unitCostPerPilgrim.visaSar) { %>
+        <div class="finance-pnl-subline">
+          <span class="finance-dual-currency">
+            الوكيل السعودي: <%= formatDualSarEgp(summary.unitCostPerPilgrim.visaSar, summary.exchangeRate, summary.unitCostPerPilgrim.visaAgentEgp) %>
+            <% if (summary.unitCostPerPilgrim.visaEgpPortal) { %> + بوابة <%= formatCurrency(summary.unitCostPerPilgrim.visaEgpPortal) %><% } %>
+            <span class="text-muted">(لكل معتمر: <%= formatCurrency(summary.unitCostPerPilgrim.total) %>)</span>
+          </span>
+        </div>
+        <% } %>
+        <% } %>
         <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--deduct">
           <span class="finance-enterprise-pnl-label">(−) بدل مشرفين وتشغيل</span>
-          <span class="finance-enterprise-pnl-amount text-danger"><%= formatCurrency(summary.tripLevelCosts) %></span>
+          <span class="finance-enterprise-pnl-amount text-danger">
+            <% if (summary.tripLevelCostsSar) { %>
+              <span class="finance-dual-currency"><%= formatDualSarEgp(summary.tripLevelCostsSar, summary.exchangeRate, summary.tripLevelCosts) %></span>
+            <% } else { %>
+              <%= formatCurrency(summary.tripLevelCosts) %>
+            <% } %>
+          </span>
         </div>
         <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--deduct">
           <span class="finance-enterprise-pnl-label">(−) مصروفات تشغيلية</span>
@@ -231,9 +284,22 @@
         </div>
         <div class="finance-enterprise-pnl-divider"></div>
         <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--total">
-          <span class="finance-enterprise-pnl-label fw-bold">(=) صافي الربح الحقيقي</span>
+          <span class="finance-enterprise-pnl-label fw-bold">(=) صافي الربح (ملتزم)</span>
           <span class="finance-enterprise-pnl-amount fw-bold <%= summary.trueProfit < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(summary.trueProfit) %></span>
         </div>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--secondary">
+          <span class="finance-enterprise-pnl-label text-muted small">هامش على الإيراد المحجوز</span>
+          <span class="finance-enterprise-pnl-amount text-muted small">
+            <span class="finance-margin-badge <%= marginClass(summary.grossMarginPercentOnBooked) %>"><%= summary.grossMarginPercentOnBooked %>%</span>
+            · <%= formatCurrency(summary.grossMarginOnBooked) %>
+          </span>
+        </div>
+        <% if (summary.passengerCostsRealized !== summary.passengerCosts) { %>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--secondary">
+          <span class="finance-enterprise-pnl-label text-muted small">تكلفة محققة (مدفوع فقط)</span>
+          <span class="finance-enterprise-pnl-amount text-muted small"><%= formatCurrency(summary.passengerCostsRealized) %></span>
+        </div>
+        <% } %>
         <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--secondary">
           <span class="finance-enterprise-pnl-label text-muted small">الربح النقدي (محصل − مصروفات فقط)</span>
           <span class="finance-enterprise-pnl-amount text-muted small"><%= formatCurrency(summary.cashProfit) %></span>
@@ -324,12 +390,12 @@
           <th class="finance-sortable text-end" data-sort="grossRevenue">إيرادات</th>
           <th class="finance-sortable text-end" data-sort="collected">محصل</th>
           <th class="finance-sortable text-end" data-sort="outstanding">مستحق</th>
-          <th class="finance-sortable text-end" data-sort="tripCosts">تكلفة</th>
-          <th class="finance-sortable text-end" data-sort="operationalExpenses">مصروفات</th>
+          <th class="finance-sortable text-end" data-sort="passengerCosts">تكلفة معتمرين</th>
+          <th class="finance-sortable text-end" data-sort="tripLevelCosts">مشرفين</th>
           <th class="finance-sortable text-end" data-sort="totalCosts">إجمالي تكلفة</th>
           <th class="finance-sortable text-end" data-sort="trueProfit">صافي ربح</th>
-          <th class="finance-sortable text-end" data-sort="marginPercent">هامش</th>
-          <th class="finance-sortable text-end" data-sort="reservationCount">حجوزات</th>
+          <th class="finance-sortable text-end" data-sort="grossMarginPercentOnBooked">هامش محجوز</th>
+          <th class="finance-sortable text-end" data-sort="passengersCommitted">معتمرين</th>
           <th></th>
         </tr>
       </thead>
@@ -345,17 +411,20 @@
               <% if (!s.costsConfigured) { %>
                 <span class="badge bg-warning text-dark ms-1" title="لم تُدخل تكلفة الرحلة">بدون تكلفة</span>
               <% } %>
+              <% if (s.exchangeRate) { %>
+                <span class="finance-exchange-badge ms-1"><%= s.exchangeRate %> ج.م./ر.س</span>
+              <% } %>
             </td>
             <td class="text-end" data-value="<%= s.grossRevenue %>"><%= formatCurrency(s.grossRevenue) %></td>
             <td class="text-end text-success" data-value="<%= s.collected %>"><%= formatCurrency(s.collected) %></td>
             <td class="text-end <%= s.outstanding > 0 ? 'text-warning fw-semibold' : '' %>" data-value="<%= s.outstanding %>"><%= formatCurrency(s.outstanding) %></td>
-            <td class="text-end text-danger" data-value="<%= s.tripCosts %>"><%= formatCurrency(s.tripCosts) %></td>
-            <td class="text-end text-danger" data-value="<%= s.operationalExpenses %>"><%= formatCurrency(s.operationalExpenses) %></td>
+            <td class="text-end text-danger" data-value="<%= s.passengerCosts %>"><%= formatCurrency(s.passengerCosts) %></td>
+            <td class="text-end text-danger" data-value="<%= s.tripLevelCosts %>"><%= formatCurrency(s.tripLevelCosts) %></td>
             <td class="text-end text-danger fw-semibold" data-value="<%= s.totalCosts %>"><%= formatCurrency(s.totalCosts) %></td>
             <td class="text-end fw-semibold <%= s.trueProfit < 0 ? 'text-danger' : 'text-success' %>" data-value="<%= s.trueProfit %>"><%= formatCurrency(s.trueProfit) %></td>
-            <td class="text-end" data-value="<%= s.marginPercent %>"><span class="finance-margin-badge <%= marginClass(s.marginPercent) %>"><%= s.marginPercent %>%</span></td>
-            <td class="text-end text-muted" data-value="<%= s.reservationCount %>">
-              <%= s.reservationCount %>
+            <td class="text-end" data-value="<%= s.grossMarginPercentOnBooked %>"><span class="finance-margin-badge <%= marginClass(s.grossMarginPercentOnBooked) %>"><%= s.grossMarginPercentOnBooked %>%</span></td>
+            <td class="text-end text-muted" data-value="<%= s.passengersCommitted %>">
+              <%= s.passengersCommitted || 0 %>
               <% if (s.reservationStats) { %>
                 <span class="d-block small text-muted"><%= s.reservationStats.paid || 0 %> مدفوع • <%= s.reservationStats.unpaid || 0 %> غير مدفوع</span>
               <% } %>
@@ -367,16 +436,51 @@
           <tr class="finance-trip-detail-row d-none" data-detail-for="<%= idx %>">
             <td colspan="11" class="finance-trip-detail-cell">
               <div class="finance-trip-detail-grid">
-                <div><span class="text-muted">تأشيرة:</span> <strong><%= formatCurrency(s.breakdown.visa) %></strong></div>
+                <div><span class="text-muted">تأشيرة (ملتزمة):</span> <strong><%= formatCurrency(s.breakdown.visa) %></strong></div>
                 <div><span class="text-muted">طيران:</span> <strong><%= formatCurrency(s.breakdown.flight) %></strong></div>
                 <div><span class="text-muted">سكن مكة:</span> <strong><%= formatCurrency(s.breakdown.accommodationMecca) %></strong></div>
                 <div><span class="text-muted">سكن المدينة:</span> <strong><%= formatCurrency(s.breakdown.accommodationMedina) %></strong></div>
-                <div><span class="text-muted">مشرف:</span> <strong><%= formatCurrency(s.breakdown.supervisor) %></strong></div>
-                <div><span class="text-muted">مساعد:</span> <strong><%= formatCurrency(s.breakdown.assistant) %></strong></div>
-                <div><span class="text-muted">تكلفة معتمرين:</span> <strong><%= formatCurrency(s.passengerCosts) %></strong></div>
+                <div>
+                  <span class="text-muted">مشرف:</span>
+                  <strong class="finance-dual-currency">
+                    <% if (s.breakdown.supervisorSar) { %>
+                      <%= formatDualSarEgp(s.breakdown.supervisorSar, s.exchangeRate, s.breakdown.supervisor) %>
+                    <% } else { %>
+                      <%= formatCurrency(s.breakdown.supervisor) %>
+                    <% } %>
+                  </strong>
+                </div>
+                <div>
+                  <span class="text-muted">مساعد:</span>
+                  <strong class="finance-dual-currency">
+                    <% if (s.breakdown.assistantSar) { %>
+                      <%= formatDualSarEgp(s.breakdown.assistantSar, s.exchangeRate, s.breakdown.assistant) %>
+                    <% } else { %>
+                      <%= formatCurrency(s.breakdown.assistant) %>
+                    <% } %>
+                  </strong>
+                </div>
+                <div><span class="text-muted">تكلفة معتمرين:</span> <strong><%= formatCurrency(s.passengerCosts) %></strong>
+                  <% if (s.passengersCommitted && s.costPerPassenger) { %>
+                    <span class="finance-cost-unit-hint">(<%= s.passengersCommitted %> × <%= formatCurrency(s.costPerPassenger) %>)</span>
+                  <% } %>
+                </div>
                 <div><span class="text-muted">مصروفات:</span> <strong><%= formatCurrency(s.operationalExpenses) %></strong></div>
-                <% if (!s.hasPaidBookings && s.projectedTripCosts > 0) { %>
-                <div class="col-span-all text-muted small"><i class="fa-solid fa-info-circle me-1"></i>تكاليف مشرفين متوقعة: <%= formatCurrency(s.projectedTripCosts) %> — الربح يُحسب بعد وجود حجوزات مدفوعة</div>
+                <% if (s.unitCostPerPilgrim && s.unitCostPerPilgrim.visaSar) { %>
+                <div class="col-span-all">
+                  <span class="text-muted">تكلفة الوحدة:</span>
+                  <strong class="finance-dual-currency">
+                    تأشيرة <%= formatDualSarEgp(s.unitCostPerPilgrim.visaSar, s.exchangeRate, s.unitCostPerPilgrim.visaAgentEgp) %>
+                    + بوابة <%= formatCurrency(s.unitCostPerPilgrim.visaEgpPortal) %>
+                    = <%= formatCurrency(s.unitCostPerPilgrim.total) %>/معتمر
+                  </strong>
+                </div>
+                <% } %>
+                <% if (s.passengerCostsRealized !== s.passengerCosts) { %>
+                <div class="col-span-all text-muted small">
+                  <i class="fa-solid fa-info-circle me-1"></i>
+                  تكلفة محققة (مدفوع فقط): <%= formatCurrency(s.passengerCostsRealized) %> — الملتزمة تشمل كل الحجوزات النشطة
+                </div>
                 <% } %>
               </div>
             </td>
@@ -389,12 +493,12 @@
           <td class="text-end fw-bold"><%= formatCurrency(matrixTotals.grossRevenue) %></td>
           <td class="text-end fw-bold text-success"><%= formatCurrency(matrixTotals.collected) %></td>
           <td class="text-end fw-bold text-warning"><%= formatCurrency(matrixTotals.outstanding) %></td>
-          <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.tripCosts) %></td>
-          <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.operationalExpenses) %></td>
+          <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.passengerCosts) %></td>
+          <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.tripLevelCosts) %></td>
           <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.totalCosts) %></td>
           <td class="text-end fw-bold <%= matrixTotals.trueProfit < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(matrixTotals.trueProfit) %></td>
           <td class="text-end">—</td>
-          <td class="text-end fw-bold"><%= matrixTotals.reservationCount %></td>
+          <td class="text-end fw-bold"><%= matrixTotals.passengersCommitted %></td>
           <td></td>
         </tr>
       </tfoot>

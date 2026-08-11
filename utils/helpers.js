@@ -15,6 +15,28 @@ const formatCurrency = (amount, currency = 'EGP') => {
   }).format(amount || 0);
 };
 
+const formatSar = (amount) => {
+  const n = Number(amount) || 0;
+  return `${new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(n)} ر.س`;
+};
+
+/** Format SAR with EGP conversion at trip rate: "460 ر.س → 6,210 ج.م." */
+const formatDualSarEgp = (sarAmount, rate, egpAmount = null) => {
+  const sar = Number(sarAmount) || 0;
+  const r = Number(rate) || 0;
+  const egp = egpAmount != null
+    ? Number(egpAmount) || 0
+    : Math.round(sar * (r || 1));
+  if (!sar && !egp) return '—';
+  if (!sar) return formatCurrency(egp);
+  return `${formatSar(sar)} → ${formatCurrency(egp)}`;
+};
+
+const formatCostLine = ({ sar, egp, rate, label } = {}) => {
+  const dual = formatDualSarEgp(sar, rate, egp);
+  return label ? `${label}: ${dual}` : dual;
+};
+
 const calcAge = (birthDate) => {
   if (!birthDate) return null;
   const today = new Date();
@@ -174,6 +196,9 @@ const getHomePath = (user) => {
 module.exports = {
   formatDate,
   formatCurrency,
+  formatSar,
+  formatDualSarEgp,
+  formatCostLine,
   calcAge,
   roomTypeLabel,
   cityLabel,

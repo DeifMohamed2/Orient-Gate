@@ -19,7 +19,7 @@ const logger = require('./config/logger');
 const indexRoutes = require('./routes/indexRoutes');
 const errorHandler = require('./middleware/error');
 const audit = require('./middleware/audit');
-const { formatDate, formatCurrency, statusLabel, roomTypeLabel, cityLabel, serviceLabel, packageStarsLabel, genderLabel, paymentMethodLabel, expenseCategoryLabel, departureLabel, seatUrgencyClass } = require('./utils/helpers');
+const { formatDate, formatCurrency, formatSar, formatDualSarEgp, formatCostLine, statusLabel, roomTypeLabel, cityLabel, serviceLabel, packageStarsLabel, genderLabel, paymentMethodLabel, expenseCategoryLabel, departureLabel, seatUrgencyClass } = require('./utils/helpers');
 
 const app = express();
 
@@ -57,11 +57,24 @@ app.use(require('./middleware/digitNormalize'));
 app.use(cookieParser());
 app.use(methodOverride('_method'));
 
+const sessionStore = MongoStore.create({
+  mongoUrl: env.mongoUri,
+  // Avoid crashing requests forever on transient store errors; log clearly instead.
+  autoRemove: 'native',
+});
+sessionStore.on('error', (err) => {
+  logger.error('Session store error (check MONGO_URI credentials/authSource)', {
+    error: err.message,
+    code: err.code,
+    codeName: err.codeName,
+  });
+});
+
 app.use(session({
   secret: env.sessionSecret,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: env.mongoUri }),
+  store: sessionStore,
   cookie: {
     secure: env.nodeEnv === 'production',
     httpOnly: true,
@@ -74,8 +87,8 @@ app.use(flash());
 
 app.use((req, res, next) => {
   const ok = (t) => (t === 'light' || t === 'dark' ? t : null);
-  const theme = ok(req.session.theme) || ok(req.cookies?.og_theme) || 'light';
-  req.session.theme = theme;
+  const theme = ok(req.session?.theme) || ok(req.cookies?.og_theme) || 'light';
+  if (req.session) req.session.theme = theme;
   res.locals.theme = theme;
   next();
 });
@@ -83,6 +96,9 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   res.locals.formatDate = formatDate;
   res.locals.formatCurrency = formatCurrency;
+  res.locals.formatSar = formatSar;
+  res.locals.formatDualSarEgp = formatDualSarEgp;
+  res.locals.formatCostLine = formatCostLine;
   res.locals.statusLabel = statusLabel;
   res.locals.roomTypeLabel = roomTypeLabel;
   res.locals.cityLabel = cityLabel;
@@ -95,10 +111,11 @@ app.use((req, res, next) => {
   res.locals.seatUrgencyClass = seatUrgencyClass;
   res.locals.currentPath = req.path;
   res.locals.currentUser = res.locals.user || null;
-  res.locals.flash_success = req.flash('success');
-  res.locals.flash_error = req.flash('error');
-  res.locals.flash_warning = req.flash('warning');
-  res.locals.flash_info = req.flash('info');
+  const flash = typeof req.flash === 'function' ? req.flash.bind(req) : () => [];
+  res.locals.flash_success = flash('success');
+  res.locals.flash_error = flash('error');
+  res.locals.flash_warning = flash('warning');
+  res.locals.flash_info = flash('info');
   next();
 });
 

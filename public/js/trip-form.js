@@ -665,7 +665,11 @@
         if (visaEgpPortal > 0 || visaAgentEgp > 0) {
           html += '<div class="cost-preview-row-detail">';
           if (visaEgpPortal > 0) html += `<span>بوابة العمرة: ${formatEgp(visaEgpPortal)}</span>`;
-          if (visaAgentEgp > 0) html += `<span>الوكيل السعودي: ${formatEgp(visaAgentEgp)}</span>`;
+          if (visaSar > 0) {
+            html += `<span class="finance-dual-currency">الوكيل السعودي: ${visaSar.toLocaleString('ar-EG')} ر.س → ${formatEgp(visaAgentEgp)}</span>`;
+          } else if (visaAgentEgp > 0) {
+            html += `<span>الوكيل السعودي: ${formatEgp(visaAgentEgp)}</span>`;
+          }
           html += '</div>';
         }
       }
@@ -709,8 +713,11 @@
       html += '<div class="cost-preview-section-head"><i class="fa-solid fa-user-tie"></i> مستوى الرحلة</div>';
       html += `<div class="cost-preview-row">
         <span class="cost-preview-row-label">بدل مشرفين (${days} يوم)</span>
-        <span class="cost-preview-row-value">${formatEgp(supervisorEgp)}</span>
+        <span class="cost-preview-row-value finance-dual-currency">${supTotalSar.toLocaleString('ar-EG')} ر.س → ${formatEgp(supervisorEgp)}</span>
       </div>`;
+      if (rate > 0) {
+        html += `<div class="cost-preview-row-detail"><span>سعر الصرف: ${rate} ج.م./ر.س</span></div>`;
+      }
       html += '</div>';
     }
 

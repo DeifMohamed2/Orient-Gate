@@ -7,7 +7,7 @@ const isStaticAsset = (req) => STATIC_PATH_PREFIXES.some((prefix) => req.path.st
 
 const rateLimitHandler = (req, res) => {
   const message = 'تم تجاوز عدد الطلبات المسموح — يرجى المحاولة بعد قليل';
-  if (req.session) req.flash('error', message);
+  if (typeof req.flash === 'function') req.flash('error', message);
   if (req.method === 'GET') {
     return res.status(429).render('errors/error', {
       title: 'خطأ',

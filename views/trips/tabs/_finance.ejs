@@ -9,12 +9,33 @@
 <% } %>
 
 <% if (cs && cs.costsConfigured) { %>
-<details class="finance-summary-strip mb-3">
+<details class="finance-summary-strip mb-3" open>
   <summary class="d-flex flex-wrap gap-3 align-items-center cursor-pointer" style="list-style:none;">
-    <span class="finance-summary-strip__item"><span>تكلفة معتمرين</span> <strong><%= formatCurrency(cs.breakdown.passengerCosts) %></strong></span>
-    <span class="finance-summary-strip__item"><span>بدل مشرفين</span> <strong><%= formatCurrency(cs.breakdown.tripLevelCosts) %></strong></span>
-    <% if (!cs.hasPaidBookings && cs.projectedTripCosts > 0) { %>
-    <span class="finance-summary-strip__item text-muted small"><i class="fa-solid fa-info-circle me-1"></i>تكاليف متوقعة: <strong class="text-warning"><%= formatCurrency(cs.projectedTripCosts) %></strong></span>
+    <span class="finance-summary-strip__item">
+      <span>تكلفة معتمرين (ملتزمة)</span>
+      <strong><%= formatCurrency(cs.passengerCostsCommitted ?? cs.breakdown.passengerCosts) %></strong>
+      <% if (cs.passengerCount?.committed) { %>
+        <span class="text-muted small">(<%= cs.passengerCount.committed %> معتمر)</span>
+      <% } %>
+    </span>
+    <span class="finance-summary-strip__item">
+      <span>بدل مشرفين</span>
+      <strong class="finance-dual-currency">
+        <% if (cs.breakdown.tripLevelCostsSar) { %>
+          <%= formatDualSarEgp(cs.breakdown.tripLevelCostsSar, cs.exchangeRate, cs.breakdown.tripLevelCosts) %>
+        <% } else { %>
+          <%= formatCurrency(cs.breakdown.tripLevelCosts) %>
+        <% } %>
+      </strong>
+    </span>
+    <span class="finance-summary-strip__item">
+      <span>إجمالي التكلفة</span>
+      <strong><%= formatCurrency(cs.totalCostsCommitted ?? cs.totalCosts) %></strong>
+    </span>
+    <% if ((cs.passengerCostsRealized || 0) !== (cs.passengerCostsCommitted ?? cs.breakdown.passengerCosts || 0)) { %>
+    <span class="finance-summary-strip__item text-muted small">
+      محققة (مدفوع): <strong><%= formatCurrency(cs.passengerCostsRealized || 0) %></strong>
+    </span>
     <% } %>
     <a href="/trips/<%= trip._id %>?tab=overview" class="finance-summary-strip__link text-primary">تفاصيل الأسعار والتكاليف →</a>
   </summary>
@@ -23,10 +44,22 @@
     <div class="col-md-3"><span class="text-muted">طيران:</span> <strong><%= formatCurrency(cs.breakdown.flight) %></strong></div>
     <div class="col-md-3"><span class="text-muted">سكن مكة:</span> <strong><%= formatCurrency(cs.breakdown.accommodationMecca) %></strong></div>
     <div class="col-md-3"><span class="text-muted">سكن المدينة:</span> <strong><%= formatCurrency(cs.breakdown.accommodationMedina) %></strong></div>
-    <div class="col-md-3"><span class="text-muted">سعر الصرف:</span> <strong><%= cs.exchangeRate %> ج.م./ر.س</strong></div>
+    <div class="col-md-3"><span class="text-muted">سعر الصرف:</span> <strong class="finance-exchange-badge"><%= cs.exchangeRate %> ج.م./ر.س</strong></div>
     <div class="col-md-3"><span class="text-muted">مصروفات تشغيلية:</span> <strong><%= formatCurrency(cs.breakdown.operationalExpenses) %></strong></div>
-    <% if (!cs.hasPaidBookings) { %>
-    <div class="col-12 text-muted small"><i class="fa-solid fa-info-circle me-1"></i>صافي الربح يُحسب بعد وجود حجوزات مدفوعة بالكامل.</div>
+    <% if (cs.unitCostPerPilgrim && cs.unitCostPerPilgrim.total) { %>
+    <div class="col-md-6">
+      <span class="text-muted">تكلفة الوحدة:</span>
+      <strong class="finance-dual-currency">
+        <% if (cs.unitCostPerPilgrim.visaSar) { %>
+          <%= formatDualSarEgp(cs.unitCostPerPilgrim.visaSar, cs.exchangeRate, cs.unitCostPerPilgrim.visaAgentEgp) %>
+          + بوابة <%= formatCurrency(cs.unitCostPerPilgrim.visaEgpPortal) %>
+        <% } %>
+        = <%= formatCurrency(cs.unitCostPerPilgrim.total) %>/معتمر
+      </strong>
+    </div>
+    <% } %>
+    <% if (cs.grossMarginPercentOnBooked != null) { %>
+    <div class="col-md-3"><span class="text-muted">هامش على المحجوز:</span> <strong><%= cs.grossMarginPercentOnBooked %>%</strong></div>
     <% } %>
   </div>
 </details>

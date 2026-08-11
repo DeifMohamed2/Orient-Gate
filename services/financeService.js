@@ -101,16 +101,27 @@ const getTripProfitability = async (tripId) => {
   const reservations = await Reservation.find({ tripId, status: 'active' });
 
   return {
-    grossRevenue: costSummary.grossRevenue,
-    collectedRevenue: costSummary.collectedRevenue,
+    grossRevenue: costSummary.bookedGrossRevenue ?? costSummary.grossRevenue,
+    collectedRevenue: costSummary.bookedCollected ?? costSummary.collectedRevenue,
     outstanding: costSummary.outstanding,
     totalExpenses: costSummary.breakdown.operationalExpenses,
-    totalCosts: costSummary.totalCosts,
-    tripCosts: costSummary.tripCosts,
-    netProfit: costSummary.netProfit,
-    profitPercent: costSummary.profitPercent,
+    totalCosts: costSummary.totalCostsCommitted ?? costSummary.totalCosts,
+    totalCostsCommitted: costSummary.totalCostsCommitted ?? costSummary.totalCosts,
+    totalCostsRealized: costSummary.totalCostsRealized,
+    tripCosts: costSummary.tripCostsCommitted ?? costSummary.tripCosts,
+    tripCostsCommitted: costSummary.tripCostsCommitted ?? costSummary.tripCosts,
+    tripCostsRealized: costSummary.tripCostsRealized,
+    passengerCosts: costSummary.passengerCostsCommitted ?? costSummary.passengerCosts,
+    passengerCostsRealized: costSummary.passengerCostsRealized,
+    netProfit: costSummary.netProfitCommitted ?? costSummary.netProfit,
+    netProfitCommitted: costSummary.netProfitCommitted ?? costSummary.netProfit,
+    netProfitRealized: costSummary.netProfitRealized,
+    profitPercent: costSummary.profitPercentCommitted ?? costSummary.profitPercent,
+    grossMarginOnBooked: costSummary.grossMarginOnBooked,
+    grossMarginPercentOnBooked: costSummary.grossMarginPercentOnBooked,
     reservationCount: reservations.length,
-    passengerCount: reservations.reduce((sum, r) => sum + (r.members?.length || 0), 0),
+    passengerCount: costSummary.passengerCount?.committed
+      ?? reservations.reduce((sum, r) => sum + (r.members?.length || 0), 0),
     costSummary,
   };
 };

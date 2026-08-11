@@ -176,28 +176,69 @@ const getEnterpriseFinanceSummary = async (filters, tripSummaries = null) => {
   const costTotals = sumCostSummaries(costMap);
 
   const operationalExpenses = base.totalExpenses;
-  const tripCosts = costTotals.tripCosts;
-  const totalCosts = tripCosts + operationalExpenses;
+  const passengerCosts = costTotals.passengerCostsCommitted;
+  const passengerCostsRealized = costTotals.passengerCostsRealized;
+  const tripLevelCosts = costTotals.tripLevelCosts;
+  const tripCosts = costTotals.tripCostsCommitted;
+  const totalCosts = costTotals.totalCostsCommitted;
+  // Realized total uses invoice operational expenses + realized trip costs
+  const totalCostsRealized = costTotals.tripCostsRealized + operationalExpenses;
   const cashProfit = base.collected - operationalExpenses;
   const trueProfit = base.collected - totalCosts;
+  const trueProfitRealized = base.collected - totalCostsRealized;
   const collectionRate = base.grossRevenue > 0
     ? Math.round((base.collected / base.grossRevenue) * 100)
     : 0;
   const marginPercent = base.collected > 0
     ? Math.round((trueProfit / base.collected) * 100)
     : 0;
+  const grossMarginOnBooked = base.grossRevenue - totalCosts;
+  const grossMarginPercentOnBooked = base.grossRevenue > 0
+    ? Math.round((grossMarginOnBooked / base.grossRevenue) * 100)
+    : 0;
+
+  const uniqueRates = [...new Set(costTotals.exchangeRates.filter(Boolean))];
+  const primaryRate = uniqueRates.length === 1
+    ? uniqueRates[0]
+    : (uniqueRates[0] || null);
+
+  // Prefer unit cost from first configured trip in map
+  let unitCostPerPilgrim = null;
+  for (const cs of Object.values(costMap)) {
+    if (cs?.unitCostPerPilgrim?.total > 0) {
+      unitCostPerPilgrim = cs.unitCostPerPilgrim;
+      break;
+    }
+  }
 
   return {
     ...base,
     collectionRate,
     operationalExpenses,
+    passengerCosts,
+    passengerCostsRealized,
+    tripLevelCosts,
+    tripLevelCostsSar: costTotals.tripLevelCostsSar,
+    supervisorSar: costTotals.supervisorSar,
+    assistantSar: costTotals.assistantSar,
     tripCosts,
-    passengerCosts: costTotals.passengerCosts,
-    tripLevelCosts: costTotals.tripLevelCosts,
+    tripCostsRealized: costTotals.tripCostsRealized,
     totalCosts,
+    totalCostsRealized,
     cashProfit,
     trueProfit,
+    trueProfitRealized,
     marginPercent,
+    grossMarginOnBooked,
+    grossMarginPercentOnBooked,
+    totalPassengers: costTotals.passengersCommitted,
+    passengersRealized: costTotals.passengersRealized,
+    costPerPassenger: costTotals.passengersCommitted
+      ? Math.round(passengerCosts / costTotals.passengersCommitted)
+      : (unitCostPerPilgrim?.total || 0),
+    exchangeRate: primaryRate,
+    exchangeRates: uniqueRates,
+    unitCostPerPilgrim,
     costBreakdown: {
       visa: costTotals.visa,
       flight: costTotals.flight,
@@ -205,6 +246,12 @@ const getEnterpriseFinanceSummary = async (filters, tripSummaries = null) => {
       accommodationMedina: costTotals.accommodationMedina,
       supervisor: costTotals.supervisor,
       assistant: costTotals.assistant,
+      supervisorSar: costTotals.supervisorSar,
+      assistantSar: costTotals.assistantSar,
+      tripLevelCostsSar: costTotals.tripLevelCostsSar,
+      visaSar: costTotals.visaSar,
+      visaEgpPortal: costTotals.visaEgpPortal,
+      visaAgentEgp: costTotals.visaAgentEgp,
       operationalExpenses,
     },
     netProfit: trueProfit,
@@ -290,33 +337,60 @@ const getTripSummaries = async (filters) => {
     const inv = invMap[String(trip._id)] || {};
     const exp = expMap[String(trip._id)] || {};
     const collected = inv.collected || 0;
+    const grossRevenue = inv.grossRevenue || 0;
     const operationalExpenses = exp.totalExpenses || 0;
     const cs = costMap[String(trip._id)] || {};
     const breakdown = cs.breakdown || {};
-    const tripCosts = cs.tripCosts || 0;
-    const totalCosts = cs.totalCosts || operationalExpenses;
+    const passengerCosts = cs.passengerCostsCommitted ?? breakdown.passengerCosts ?? 0;
+    const passengerCostsRealized = cs.passengerCostsRealized ?? 0;
+    const tripLevelCosts = breakdown.tripLevelCosts || 0;
+    const tripCosts = cs.tripCostsCommitted ?? cs.tripCosts ?? 0;
+    const totalCosts = cs.totalCostsCommitted ?? cs.totalCosts ?? (tripCosts + operationalExpenses);
+    const totalCostsRealized = cs.totalCostsRealized ?? (passengerCostsRealized + tripLevelCosts + operationalExpenses);
     const trueProfit = collected - totalCosts;
+    const trueProfitRealized = collected - totalCostsRealized;
     const marginPercent = collected > 0 ? Math.round((trueProfit / collected) * 100) : 0;
+    const grossMarginOnBooked = grossRevenue - totalCosts;
+    const grossMarginPercentOnBooked = grossRevenue > 0
+      ? Math.round((grossMarginOnBooked / grossRevenue) * 100)
+      : 0;
     const stats = resStatsMap[String(trip._id)] || { total: 0, paid: 0, partial: 0, unpaid: 0 };
+    const passengersCommitted = cs.passengerCount?.committed || 0;
 
     return {
       trip,
-      grossRevenue: inv.grossRevenue || 0,
+      grossRevenue,
       collected,
       outstanding: inv.outstanding || 0,
       operationalExpenses,
-      passengerCosts: breakdown.passengerCosts || 0,
-      tripLevelCosts: breakdown.tripLevelCosts || 0,
+      passengerCosts,
+      passengerCostsRealized,
+      tripLevelCosts,
+      tripLevelCostsSar: breakdown.tripLevelCostsSar || 0,
+      supervisorSar: breakdown.supervisorSar || 0,
+      assistantSar: breakdown.assistantSar || 0,
       tripCosts,
+      tripCostsRealized: cs.tripCostsRealized || 0,
       totalCosts,
+      totalCostsRealized,
       totalExpenses: operationalExpenses,
       netProfit: trueProfit,
       trueProfit,
+      trueProfitRealized,
       cashProfit: collected - operationalExpenses,
       marginPercent,
+      grossMarginOnBooked,
+      grossMarginPercentOnBooked,
       invoiceCount: inv.invoiceCount || 0,
       reservationCount: stats.total,
       reservationStats: stats,
+      passengersCommitted,
+      passengersRealized: cs.passengerCount?.realized || 0,
+      costPerPassenger: passengersCommitted
+        ? Math.round(passengerCosts / passengersCommitted)
+        : (cs.unitCostPerPilgrim?.total || 0),
+      exchangeRate: cs.exchangeRate || null,
+      unitCostPerPilgrim: cs.unitCostPerPilgrim || null,
       costsConfigured: cs.costsConfigured || false,
       hasPaidBookings: cs.hasPaidBookings || false,
       projectedTripCosts: cs.projectedTripCosts || 0,
@@ -327,8 +401,15 @@ const getTripSummaries = async (filters) => {
         accommodationMedina: breakdown.accommodationMedina || 0,
         supervisor: breakdown.supervisor || 0,
         assistant: breakdown.assistant || 0,
-        passengerCosts: breakdown.passengerCosts || 0,
-        tripLevelCosts: breakdown.tripLevelCosts || 0,
+        supervisorSar: breakdown.supervisorSar || 0,
+        assistantSar: breakdown.assistantSar || 0,
+        tripLevelCostsSar: breakdown.tripLevelCostsSar || 0,
+        visaSar: breakdown.visaSar || 0,
+        visaEgpPortal: breakdown.visaEgpPortal || 0,
+        visaAgentEgp: breakdown.visaAgentEgp || 0,
+        passengerCosts,
+        passengerCostsRealized,
+        tripLevelCosts,
         operationalExpenses,
       },
     };
@@ -513,23 +594,29 @@ const computeTripMatrixTotals = (tripSummaries) => tripSummaries.reduce((acc, s)
   collected: acc.collected + (s.collected || 0),
   outstanding: acc.outstanding + (s.outstanding || 0),
   passengerCosts: acc.passengerCosts + (s.passengerCosts || 0),
+  passengerCostsRealized: acc.passengerCostsRealized + (s.passengerCostsRealized || 0),
   tripLevelCosts: acc.tripLevelCosts + (s.tripLevelCosts || 0),
+  tripLevelCostsSar: acc.tripLevelCostsSar + (s.tripLevelCostsSar || 0),
   tripCosts: acc.tripCosts + (s.tripCosts || 0),
   operationalExpenses: acc.operationalExpenses + (s.operationalExpenses || 0),
   totalCosts: acc.totalCosts + (s.totalCosts || 0),
   trueProfit: acc.trueProfit + (s.trueProfit || 0),
   reservationCount: acc.reservationCount + (s.reservationCount || 0),
+  passengersCommitted: acc.passengersCommitted + (s.passengersCommitted || 0),
 }), {
   grossRevenue: 0,
   collected: 0,
   outstanding: 0,
   passengerCosts: 0,
+  passengerCostsRealized: 0,
   tripLevelCosts: 0,
+  tripLevelCostsSar: 0,
   tripCosts: 0,
   operationalExpenses: 0,
   totalCosts: 0,
   trueProfit: 0,
   reservationCount: 0,
+  passengersCommitted: 0,
 });
 
 const getLedger = async (filters) => {

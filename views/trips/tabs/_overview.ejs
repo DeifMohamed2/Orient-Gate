@@ -29,10 +29,19 @@
   </div>
   <% } %>
 
-  <% if (cs && !cs.hasPaidBookings && cs.projectedTripCosts > 0) { %>
+  <% if (cs && cs.costsConfigured) { %>
   <div class="trip-hub-alert trip-hub-alert--info mb-3">
     <i class="fa-solid fa-circle-info"></i>
-    <span>لا توجد حجوزات مدفوعة بعد — تكاليف الرحلة المتوقعة (بدل المشرفين وغيرها): <strong><%= formatCurrency(cs.projectedTripCosts) %></strong>. صافي الربح يُحسب عند وجود تحصيل فعلي.</span>
+    <span>
+      تكلفة ملتزمة: <strong><%= formatCurrency(cs.totalCostsCommitted ?? cs.totalCosts) %></strong>
+      (<%= cs.passengerCount?.committed || 0 %> معتمر)
+      <% if (cs.breakdown?.tripLevelCostsSar) { %>
+        · مشرفين: <strong class="finance-dual-currency"><%= formatDualSarEgp(cs.breakdown.tripLevelCostsSar, cs.exchangeRate, cs.breakdown.tripLevelCosts) %></strong>
+      <% } %>
+      <% if ((cs.passengerCostsRealized || 0) !== (cs.passengerCostsCommitted || 0)) { %>
+        · محققة (مدفوع): <strong><%= formatCurrency(cs.passengerCostsRealized || 0) %></strong>
+      <% } %>
+    </span>
   </div>
   <% } %>
 
@@ -164,20 +173,24 @@
           <div class="col-md-3 col-6">
             <div class="overview-cost-tile">
               <span class="overview-cost-tile__label">تأشيرة سعودية (سمسار)</span>
-              <strong><%= formatCurrency(tripCosts.visaSaudiAgentSar) %> ر.س</strong>
+              <strong class="finance-dual-currency">
+                <% const visaSar = tripCosts.visaSaudiAgentSar || 0; %>
+                <% const rate = tripCosts.sarToEgpRate || cs.exchangeRate || 13.5; %>
+                <%= formatDualSarEgp(visaSar, rate) %>
+              </strong>
             </div>
           </div>
           <div class="col-md-3 col-6">
             <div class="overview-cost-tile">
               <span class="overview-cost-tile__label">سعر الصرف</span>
-              <strong><%= tripCosts.sarToEgpRate || cs.exchangeRate || '—' %> ج.م./ر.س</strong>
+              <strong class="finance-exchange-badge"><%= tripCosts.sarToEgpRate || cs.exchangeRate || '—' %> ج.م./ر.س</strong>
             </div>
           </div>
           <% if (trip.supervisorId) { %>
           <div class="col-md-3 col-6">
             <div class="overview-cost-tile">
               <span class="overview-cost-tile__label">بدل المشرف / يوم</span>
-              <strong><%= formatCurrency(tripCosts.supervisorDailyRateSar) %> ر.س</strong>
+              <strong class="finance-dual-currency"><%= formatDualSarEgp(tripCosts.supervisorDailyRateSar, tripCosts.sarToEgpRate || cs.exchangeRate) %></strong>
             </div>
           </div>
           <% } %>
@@ -185,7 +198,7 @@
           <div class="col-md-3 col-6">
             <div class="overview-cost-tile">
               <span class="overview-cost-tile__label">بدل المساعد / يوم</span>
-              <strong><%= formatCurrency(tripCosts.assistantDailyRateSar) %> ر.س</strong>
+              <strong class="finance-dual-currency"><%= formatDualSarEgp(tripCosts.assistantDailyRateSar, tripCosts.sarToEgpRate || cs.exchangeRate) %></strong>
             </div>
           </div>
           <% } %>
@@ -198,6 +211,7 @@
         <div class="overview-hotel-costs">
           <% hotelsWithCosts.forEach(h => {
             const tier = hnc[String(h._id)] || hnc[h._id] || {};
+            const hotelRate = tripCosts.sarToEgpRate || cs.exchangeRate;
           %>
             <div class="overview-hotel-cost-block">
               <div class="overview-hotel-cost-head">
@@ -207,7 +221,7 @@
               <div class="overview-chip-row">
                 <% roomTypes.forEach(rt => { %>
                   <% if (tier[rt]) { %>
-                    <span class="overview-chip overview-chip--sm"><%= roomTypeLabel(rt) %>: <%= formatCurrency(tier[rt]) %> ر.س</span>
+                    <span class="overview-chip overview-chip--sm finance-dual-currency"><%= roomTypeLabel(rt) %>: <%= formatDualSarEgp(tier[rt], hotelRate) %></span>
                   <% } %>
                 <% }) %>
               </div>
@@ -216,16 +230,28 @@
         </div>
         <% } %>
 
-        <% if (cs && cs.hasPaidBookings) { %>
+        <% if (cs) { %>
         <div class="overview-subsection mt-3 pt-3 border-top">
-          <h6 class="overview-subsection-title">تكاليف فعلية (حجوزات مدفوعة)</h6>
+          <h6 class="overview-subsection-title">تكاليف ملتزمة (كل الحجوزات النشطة)</h6>
           <div class="row g-2 small">
             <div class="col-md-3"><span class="text-muted">تأشيرة:</span> <strong><%= formatCurrency(cs.breakdown.visa) %></strong></div>
             <div class="col-md-3"><span class="text-muted">طيران:</span> <strong><%= formatCurrency(cs.breakdown.flight) %></strong></div>
             <div class="col-md-3"><span class="text-muted">سكن مكة:</span> <strong><%= formatCurrency(cs.breakdown.accommodationMecca) %></strong></div>
             <div class="col-md-3"><span class="text-muted">سكن المدينة:</span> <strong><%= formatCurrency(cs.breakdown.accommodationMedina) %></strong></div>
+            <div class="col-md-3"><span class="text-muted">معتمرين:</span> <strong><%= cs.passengerCount?.committed || 0 %></strong></div>
+            <div class="col-md-3"><span class="text-muted">إجمالي ملتزم:</span> <strong><%= formatCurrency(cs.totalCostsCommitted ?? cs.totalCosts) %></strong></div>
           </div>
         </div>
+        <% if (cs.hasPaidBookings && (cs.passengerCostsRealized || 0) !== (cs.passengerCostsCommitted || 0)) { %>
+        <div class="overview-subsection mt-3 pt-3 border-top">
+          <h6 class="overview-subsection-title">تكاليف محققة (حجوزات مدفوعة)</h6>
+          <div class="row g-2 small">
+            <div class="col-md-3"><span class="text-muted">تكلفة معتمرين:</span> <strong><%= formatCurrency(cs.passengerCostsRealized) %></strong></div>
+            <div class="col-md-3"><span class="text-muted">معتمرين مدفوعين:</span> <strong><%= cs.passengerCount?.realized || 0 %></strong></div>
+            <div class="col-md-3"><span class="text-muted">إجمالي محقق:</span> <strong><%= formatCurrency(cs.totalCostsRealized) %></strong></div>
+          </div>
+        </div>
+        <% } %>
         <% } %>
         <% } else { %>
         <p class="text-muted mb-0">لم تُدخل تكاليف الرحلة — <a href="/trips/<%= trip._id %>/edit">عدّل الرحلة</a> لإدخال التكاليف وحساب الربحية بدقة.</p>

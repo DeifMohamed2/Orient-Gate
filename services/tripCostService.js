@@ -154,20 +154,81 @@ const getReservationCost = async (reservation, trip, hotels, rate) => {
 const getTripLevelCostsEgp = (trip, rate) => {
   const costs = trip.costs || {};
   const days = num(trip.durationDays, 1);
-  let supervisor = 0;
-  let assistant = 0;
+  let supervisorSar = 0;
+  let assistantSar = 0;
 
   if (trip.supervisorId && num(costs.supervisorDailyRateSar) > 0) {
-    supervisor = sarToEgp(num(costs.supervisorDailyRateSar) * days, rate);
+    supervisorSar = num(costs.supervisorDailyRateSar) * days;
   }
   if (trip.assistantSupervisorId && num(costs.assistantDailyRateSar) > 0) {
-    assistant = sarToEgp(num(costs.assistantDailyRateSar) * days, rate);
+    assistantSar = num(costs.assistantDailyRateSar) * days;
   }
+
+  const supervisor = sarToEgp(supervisorSar, rate);
+  const assistant = sarToEgp(assistantSar, rate);
 
   return {
     supervisor,
     assistant,
     total: supervisor + assistant,
+    supervisorSar,
+    assistantSar,
+    totalSar: supervisorSar + assistantSar,
+  };
+};
+
+/** Unit cost per pilgrim (EGP) — mirrors trip-form preview (visa + flight + quad hotel stay). */
+const getUnitCostBreakdown = (trip, hotels = [], rate) => {
+  const costs = trip.costs || {};
+  const visaSar = num(costs.visaSaudiAgentSar);
+  const visaEgpPortal = num(costs.visaEgyptPortalEgp);
+  const visaAgentEgp = sarToEgp(visaSar, rate);
+  const visa = visaEgpPortal + visaAgentEgp;
+  const flight = num(costs.flightTicketCostEgp);
+
+  const roomType = 'quad';
+  const accommodation = getMemberAccommodationCostEgp(costs, hotels, roomType, rate);
+
+  return {
+    visa,
+    visaSar,
+    visaEgpPortal,
+    visaAgentEgp,
+    flight,
+    accommodation: accommodation.total,
+    accommodationMecca: accommodation.mecca,
+    accommodationMedina: accommodation.medina,
+    total: visa + flight + accommodation.total,
+  };
+};
+
+const accumulatePassengerCosts = async (reservationList, trip, hotels, rate) => {
+  let passengerCosts = 0;
+  let visaTotal = 0;
+  let flightTotal = 0;
+  let meccaTotal = 0;
+  let medinaTotal = 0;
+  let passengers = 0;
+
+  for (const reservation of reservationList) {
+    const cost = await getReservationCost(reservation, trip, hotels, rate);
+    passengerCosts += cost.total;
+    passengers += (reservation.members || []).length;
+    for (const m of cost.memberBreakdowns) {
+      visaTotal += m.visa;
+      flightTotal += m.flight;
+      meccaTotal += m.accommodationMecca;
+      medinaTotal += m.accommodationMedina;
+    }
+  }
+
+  return {
+    passengerCosts,
+    visa: visaTotal,
+    flight: flightTotal,
+    accommodationMecca: meccaTotal,
+    accommodationMedina: medinaTotal,
+    passengers,
   };
 };
 
@@ -193,72 +254,137 @@ const hasCostsConfigured = (trip) => {
 };
 
 const computeTripCostSummary = async (trip, hotels, reservations, expenses, rate) => {
-  const paidReservations = reservations.filter((r) => r.paymentStatus === 'paid');
+  const activeReservations = reservations.filter((r) => r.status !== 'cancelled');
+  const paidReservations = activeReservations.filter((r) => r.paymentStatus === 'paid');
+
+  // Revenue: all active bookings (invoice-aligned for hub) + paid-only for legacy fields
+  const bookedGrossRevenue = activeReservations.reduce(
+    (sum, r) => sum + num(r.pricingSnapshot?.total),
+    0
+  );
+  const bookedCollected = activeReservations.reduce(
+    (sum, r) => sum + num(r.pricingSnapshot?.paid),
+    0
+  );
   const collectedRevenue = paidReservations.reduce(
     (sum, r) => sum + num(r.pricingSnapshot?.paid),
     0
   );
-  const grossRevenue = paidReservations.reduce(
+  const paidGrossRevenue = paidReservations.reduce(
     (sum, r) => sum + num(r.pricingSnapshot?.total),
     0
   );
 
-  let passengerCosts = 0;
-  let visaTotal = 0;
-  let flightTotal = 0;
-  let meccaTotal = 0;
-  let medinaTotal = 0;
-  let paidPassengers = 0;
-
-  for (const reservation of paidReservations) {
-    const cost = await getReservationCost(reservation, trip, hotels, rate);
-    passengerCosts += cost.total;
-    paidPassengers += (reservation.members || []).length;
-    for (const m of cost.memberBreakdowns) {
-      visaTotal += m.visa;
-      flightTotal += m.flight;
-      meccaTotal += m.accommodationMecca;
-      medinaTotal += m.accommodationMedina;
-    }
-  }
+  const [committed, realized] = await Promise.all([
+    accumulatePassengerCosts(activeReservations, trip, hotels, rate),
+    accumulatePassengerCosts(paidReservations, trip, hotels, rate),
+  ]);
 
   const tripLevel = getTripLevelCostsEgp(trip, rate);
   const operationalExpenses = expenses.reduce((sum, e) => sum + num(e.amount), 0);
-  const tripCosts = passengerCosts + tripLevel.total;
-  const totalCosts = tripCosts + operationalExpenses;
+  const unitCost = getUnitCostBreakdown(trip, hotels, rate);
+
+  const passengerCostsCommitted = committed.passengerCosts;
+  const passengerCostsRealized = realized.passengerCosts;
+  const tripCostsCommitted = passengerCostsCommitted + tripLevel.total;
+  const tripCostsRealized = passengerCostsRealized + tripLevel.total;
+  const totalCostsCommitted = tripCostsCommitted + operationalExpenses;
+  const totalCostsRealized = tripCostsRealized + operationalExpenses;
+
   const hasPaidBookings = paidReservations.length > 0;
-  const netProfit = hasPaidBookings ? collectedRevenue - totalCosts : 0;
-  const profitPercent = hasPaidBookings && collectedRevenue > 0
-    ? Math.round((netProfit / collectedRevenue) * 100)
+  const hasCommittedBookings = activeReservations.length > 0;
+
+  // Primary profit: collected (all invoices paid amounts) vs committed costs
+  // Prefer bookedCollected when available (active reservations); hub overrides with invoice collected
+  const netProfitCommitted = bookedCollected - totalCostsCommitted;
+  const netProfitRealized = hasPaidBookings
+    ? collectedRevenue - totalCostsRealized
     : 0;
+  const profitPercentCommitted = bookedCollected > 0
+    ? Math.round((netProfitCommitted / bookedCollected) * 100)
+    : 0;
+  const profitPercentRealized = hasPaidBookings && collectedRevenue > 0
+    ? Math.round((netProfitRealized / collectedRevenue) * 100)
+    : 0;
+
+  const grossMarginOnBooked = bookedGrossRevenue - totalCostsCommitted;
+  const grossMarginPercentOnBooked = bookedGrossRevenue > 0
+    ? Math.round((grossMarginOnBooked / bookedGrossRevenue) * 100)
+    : 0;
+
+  const costs = trip.costs || {};
 
   return {
     exchangeRate: rate,
     costsConfigured: hasCostsConfigured(trip),
+    // Revenue (legacy paid-only + booked)
     collectedRevenue,
-    grossRevenue,
-    outstanding: grossRevenue - collectedRevenue,
+    grossRevenue: paidGrossRevenue,
+    bookedGrossRevenue,
+    bookedCollected,
+    outstanding: bookedGrossRevenue - bookedCollected,
     paidReservationCount: paidReservations.length,
-    paidPassengers,
+    paidPassengers: realized.passengers,
     hasPaidBookings,
+    hasCommittedBookings,
     projectedTripCosts: tripLevel.total,
+    passengerCount: {
+      committed: committed.passengers,
+      realized: realized.passengers,
+    },
+    unitCostPerPilgrim: unitCost,
     breakdown: {
-      visa: visaTotal,
-      flight: flightTotal,
-      accommodationMecca: meccaTotal,
-      accommodationMedina: medinaTotal,
-      passengerCosts,
+      // Committed (primary) passenger breakdown
+      visa: committed.visa,
+      flight: committed.flight,
+      accommodationMecca: committed.accommodationMecca,
+      accommodationMedina: committed.accommodationMedina,
+      passengerCosts: passengerCostsCommitted,
+      passengerCostsCommitted,
+      passengerCostsRealized,
+      // Realized breakdown
+      visaRealized: realized.visa,
+      flightRealized: realized.flight,
+      accommodationMeccaRealized: realized.accommodationMecca,
+      accommodationMedinaRealized: realized.accommodationMedina,
+      // Trip-level
       supervisor: tripLevel.supervisor,
       assistant: tripLevel.assistant,
       tripLevelCosts: tripLevel.total,
       operationalExpenses,
-      tripCosts,
+      tripCosts: tripCostsCommitted,
+      // SAR originals for dual display
+      supervisorSar: tripLevel.supervisorSar,
+      assistantSar: tripLevel.assistantSar,
+      tripLevelCostsSar: tripLevel.totalSar,
+      visaSar: num(costs.visaSaudiAgentSar),
+      visaEgpPortal: num(costs.visaEgyptPortalEgp),
+      visaAgentEgp: unitCost.visaAgentEgp,
     },
-    tripCosts,
-    totalCosts,
-    netProfit,
-    profitPercent,
-    costPerPaidPassenger: paidPassengers ? Math.round(passengerCosts / paidPassengers) : 0,
+    // Primary = committed
+    tripCosts: tripCostsCommitted,
+    tripCostsCommitted,
+    tripCostsRealized,
+    totalCosts: totalCostsCommitted,
+    totalCostsCommitted,
+    totalCostsRealized,
+    passengerCosts: passengerCostsCommitted,
+    passengerCostsCommitted,
+    passengerCostsRealized,
+    netProfit: netProfitCommitted,
+    netProfitCommitted,
+    netProfitRealized,
+    profitPercent: profitPercentCommitted,
+    profitPercentCommitted,
+    profitPercentRealized,
+    grossMarginOnBooked,
+    grossMarginPercentOnBooked,
+    costPerPaidPassenger: realized.passengers
+      ? Math.round(passengerCostsRealized / realized.passengers)
+      : 0,
+    costPerCommittedPassenger: committed.passengers
+      ? Math.round(passengerCostsCommitted / committed.passengers)
+      : 0,
   };
 };
 
@@ -324,35 +450,74 @@ const getAggregatedTripCosts = async (tripIds = []) => {
 const sumCostSummaries = (costMap = {}) => {
   const totals = {
     passengerCosts: 0,
+    passengerCostsCommitted: 0,
+    passengerCostsRealized: 0,
     tripLevelCosts: 0,
+    tripLevelCostsSar: 0,
     tripCosts: 0,
+    tripCostsCommitted: 0,
+    tripCostsRealized: 0,
     operationalExpenses: 0,
     totalCosts: 0,
+    totalCostsCommitted: 0,
+    totalCostsRealized: 0,
     visa: 0,
     flight: 0,
     accommodationMecca: 0,
     accommodationMedina: 0,
     supervisor: 0,
     assistant: 0,
+    supervisorSar: 0,
+    assistantSar: 0,
     collectedRevenue: 0,
     netProfit: 0,
+    netProfitCommitted: 0,
+    netProfitRealized: 0,
+    passengersCommitted: 0,
+    passengersRealized: 0,
+    visaSar: 0,
+    visaEgpPortal: 0,
+    visaAgentEgp: 0,
+    unitCostTotal: 0,
+    exchangeRates: [],
   };
 
   Object.values(costMap).forEach((cs) => {
     if (!cs) return;
-    totals.passengerCosts += cs.breakdown?.passengerCosts || 0;
-    totals.tripLevelCosts += cs.breakdown?.tripLevelCosts || 0;
-    totals.tripCosts += cs.tripCosts || 0;
-    totals.operationalExpenses += cs.breakdown?.operationalExpenses || 0;
-    totals.totalCosts += cs.totalCosts || 0;
-    totals.visa += cs.breakdown?.visa || 0;
-    totals.flight += cs.breakdown?.flight || 0;
-    totals.accommodationMecca += cs.breakdown?.accommodationMecca || 0;
-    totals.accommodationMedina += cs.breakdown?.accommodationMedina || 0;
-    totals.supervisor += cs.breakdown?.supervisor || 0;
-    totals.assistant += cs.breakdown?.assistant || 0;
+    const b = cs.breakdown || {};
+    totals.passengerCosts += b.passengerCostsCommitted ?? b.passengerCosts ?? 0;
+    totals.passengerCostsCommitted += b.passengerCostsCommitted ?? b.passengerCosts ?? 0;
+    totals.passengerCostsRealized += b.passengerCostsRealized || 0;
+    totals.tripLevelCosts += b.tripLevelCosts || 0;
+    totals.tripLevelCostsSar += b.tripLevelCostsSar || 0;
+    totals.tripCosts += cs.tripCostsCommitted ?? cs.tripCosts ?? 0;
+    totals.tripCostsCommitted += cs.tripCostsCommitted ?? cs.tripCosts ?? 0;
+    totals.tripCostsRealized += cs.tripCostsRealized || 0;
+    totals.operationalExpenses += b.operationalExpenses || 0;
+    totals.totalCosts += cs.totalCostsCommitted ?? cs.totalCosts ?? 0;
+    totals.totalCostsCommitted += cs.totalCostsCommitted ?? cs.totalCosts ?? 0;
+    totals.totalCostsRealized += cs.totalCostsRealized || 0;
+    totals.visa += b.visa || 0;
+    totals.flight += b.flight || 0;
+    totals.accommodationMecca += b.accommodationMecca || 0;
+    totals.accommodationMedina += b.accommodationMedina || 0;
+    totals.supervisor += b.supervisor || 0;
+    totals.assistant += b.assistant || 0;
+    totals.supervisorSar += b.supervisorSar || 0;
+    totals.assistantSar += b.assistantSar || 0;
     totals.collectedRevenue += cs.collectedRevenue || 0;
-    totals.netProfit += cs.netProfit || 0;
+    totals.netProfit += cs.netProfitCommitted ?? cs.netProfit ?? 0;
+    totals.netProfitCommitted += cs.netProfitCommitted ?? cs.netProfit ?? 0;
+    totals.netProfitRealized += cs.netProfitRealized || 0;
+    totals.passengersCommitted += cs.passengerCount?.committed || 0;
+    totals.passengersRealized += cs.passengerCount?.realized || 0;
+    if (cs.exchangeRate) totals.exchangeRates.push(cs.exchangeRate);
+    if (cs.unitCostPerPilgrim) {
+      totals.visaSar = cs.unitCostPerPilgrim.visaSar || totals.visaSar;
+      totals.visaEgpPortal = cs.unitCostPerPilgrim.visaEgpPortal || totals.visaEgpPortal;
+      totals.visaAgentEgp = cs.unitCostPerPilgrim.visaAgentEgp || totals.visaAgentEgp;
+      totals.unitCostTotal = cs.unitCostPerPilgrim.total || totals.unitCostTotal;
+    }
   });
 
   return totals;
@@ -390,6 +555,7 @@ module.exports = {
   getMemberCostBreakdown,
   getReservationCost,
   getTripLevelCostsEgp,
+  getUnitCostBreakdown,
   getTripCostSummary,
   computeTripCostSummary,
   getAggregatedTripCosts,

@@ -19,7 +19,7 @@ const {
   buildQueryString,
 } = require('../services/financeDashboardService');
 const {
-  formatDate, formatCurrency, statusLabel, paymentMethodLabel, expenseCategoryLabel,
+  formatDate, formatCurrency, formatSar, formatDualSarEgp, statusLabel, paymentMethodLabel, expenseCategoryLabel,
 } = require('../utils/helpers');
 const AppError = require('../utils/AppError');
 
@@ -60,6 +60,8 @@ const index = async (req, res, next) => {
       buildQueryString,
       formatDate,
       formatCurrency,
+      formatSar,
+      formatDualSarEgp,
       statusLabel,
       paymentMethodLabel,
       expenseCategoryLabel,

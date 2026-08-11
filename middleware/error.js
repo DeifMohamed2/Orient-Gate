@@ -11,13 +11,29 @@ const USER_MESSAGES = {
   500: 'حدث خطأ في الخادم — يرجى المحاولة لاحقاً',
 };
 
+/** Session/flash may be missing when the store (MongoDB) fails before connect-flash runs. */
+const safeFlash = (req, type, message) => {
+  if (typeof req.flash === 'function') {
+    req.flash(type, message);
+  }
+};
+
 const flashErrorMessages = (req, err, message) => {
   const validationMessages = err.details?.validationMessages;
   if (validationMessages?.length) {
-    validationMessages.forEach((m) => req.flash('error', m));
+    validationMessages.forEach((m) => safeFlash(req, 'error', m));
     return;
   }
-  req.flash('error', message);
+  safeFlash(req, 'error', message);
+};
+
+const renderErrorPage = (res, statusCode, message) => {
+  return res.status(statusCode).render('errors/error', {
+    title: 'خطأ',
+    message,
+    statusCode,
+    layout: false,
+  });
 };
 
 const errorHandler = (err, req, res, next) => {
@@ -29,6 +45,10 @@ const errorHandler = (err, req, res, next) => {
 
   if (!isAppError) {
     console.error(err);
+  }
+
+  if (res.headersSent) {
+    return next(err);
   }
 
   if (wantsJsonResponse(req)) {
@@ -45,7 +65,7 @@ const errorHandler = (err, req, res, next) => {
   if (isAppError) {
     flashErrorMessages(req, err, userMessage);
 
-    if (req.method !== 'GET' && /\/trips(\/|$)/.test(req.originalUrl) && req.body && Object.keys(req.body).length) {
+    if (req.session && req.method !== 'GET' && /\/trips(\/|$)/.test(req.originalUrl) && req.body && Object.keys(req.body).length) {
       req.session.tripFormDraft = {
         body: req.body,
         mode: req.method === 'PUT' ? 'edit' : 'create',
@@ -54,7 +74,7 @@ const errorHandler = (err, req, res, next) => {
       };
     }
 
-    if (req.method === 'POST' && /\/reservations(\/|$)/.test(req.originalUrl) && req.body && Object.keys(req.body).length > 0) {
+    if (req.session && req.method === 'POST' && /\/reservations(\/|$)/.test(req.originalUrl) && req.body && Object.keys(req.body).length > 0) {
       req.session.reservationFormDraft = {
         body: req.body,
         savedAt: Date.now(),
@@ -62,26 +82,16 @@ const errorHandler = (err, req, res, next) => {
     }
 
     if (req.method === 'GET') {
-      return res.status(statusCode).render('errors/error', {
-        title: 'خطأ',
-        message: userMessage,
-        statusCode,
-        layout: false,
-      });
+      return renderErrorPage(res, statusCode, userMessage);
     }
 
     return res.redirect(getSafeRedirectUrl(req));
   }
 
-  req.flash('error', USER_MESSAGES[500]);
+  safeFlash(req, 'error', USER_MESSAGES[500]);
 
   if (req.method === 'GET') {
-    return res.status(500).render('errors/error', {
-      title: 'خطأ',
-      message: USER_MESSAGES[500],
-      statusCode: 500,
-      layout: false,
-    });
+    return renderErrorPage(res, 500, USER_MESSAGES[500]);
   }
 
   return res.redirect(getSafeRedirectUrl(req));

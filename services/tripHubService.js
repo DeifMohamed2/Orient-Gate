@@ -250,12 +250,18 @@ const buildContextBar = (activeTab, {
       return [
         { label: 'محصل', display: fmtEgp(profitability.collectedRevenue) },
         { label: 'مستحق', display: fmtEgp(profitability.outstanding), warn: profitability.outstanding > 0 },
-        { label: 'إجمالي التكلفة', display: fmtEgp(cs?.totalCosts || profitability.totalCosts || 0) },
-        { label: 'تكلفة رحلة', display: fmtEgp(cs?.tripCosts || profitability.tripCosts || 0) },
+        {
+          label: 'تكلفة ملتزمة',
+          display: fmtEgp(cs?.totalCostsCommitted || cs?.totalCosts || profitability.totalCosts || 0),
+        },
+        {
+          label: 'معتمرين',
+          display: fmtNum(cs?.passengerCount?.committed || profitability.passengerCount || 0),
+        },
         {
           label: 'صافي الربح',
-          display: fmtEgp(profitability.netProfit),
-          warn: profitability.netProfit < 0,
+          display: fmtEgp(profitability.netProfitCommitted ?? profitability.netProfit),
+          warn: (profitability.netProfitCommitted ?? profitability.netProfit) < 0,
         },
       ];
     case 'operations':
@@ -350,11 +356,12 @@ async function getTripHubData(tripId, options = {}) {
       collected: profitability.collectedRevenue || 0,
       outstanding: profitability.outstanding || 0,
       expenses: profitability.totalExpenses || 0,
+      tripCosts: profitability.tripCostsCommitted || profitability.tripCosts || 0,
+      totalCosts: profitability.totalCostsCommitted || profitability.totalCosts || 0,
+      passengerCosts: profitability.passengerCosts || 0,
       projectedTripCosts: profitability.costSummary?.projectedTripCosts || 0,
       hasPaidBookings: profitability.costSummary?.hasPaidBookings || false,
-      netProfit: profitability.costSummary?.hasPaidBookings
-        ? (profitability.netProfit || 0)
-        : 0,
+      netProfit: profitability.netProfitCommitted ?? profitability.netProfit ?? 0,
     },
   };
 
