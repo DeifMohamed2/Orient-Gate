@@ -1,0 +1,65 @@
+<% 
+  const u = typeof user !== 'undefined' && user ? user : (typeof currentUser !== 'undefined' ? currentUser : null);
+  let initials = 'م';
+  if (u) {
+    const a = (u.name && u.name[0]) || (u.email && u.email[0]) || '?';
+    initials = a.toUpperCase();
+  }
+  const roleLabel = u && u.role ? String(u.role).replace(/_/g, ' ') : '';
+%>
+<header class="topbar" role="banner">
+  <button type="button" class="sidebar-collapse-toggle" id="sidebarCollapseToggle" aria-label="إظهار/إخفاء القائمة" aria-expanded="true" title="القائمة الجانبية">
+    <i class="fa-solid fa-bars" aria-hidden="true"></i>
+  </button>
+  <button type="button" class="sidebar-toggle d-lg-none" id="sidebarToggle" aria-label="فتح القائمة">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+
+  <div class="topbar-center">
+    <div class="search-shell">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <form action="/dashboard/search" method="GET" class="search-form-inner">
+        <input type="search" name="search" placeholder="بحث في الحجوزات والعملاء..." autocomplete="off" aria-label="بحث" />
+      </form>
+    </div>
+  </div>
+
+  <div class="topbar-spacer d-none d-md-block"></div>
+
+  <div class="topbar-right">
+    <div class="topbar-actions-cluster">
+      <form method="post" action="/session/theme" class="d-inline m-0">
+        <input type="hidden" name="theme" value="<%= typeof theme !== 'undefined' && theme === 'dark' ? 'light' : 'dark' %>" />
+        <button type="submit" class="icon-btn" title="تبديل المظهر" aria-label="تبديل المظهر">
+          <% if (typeof theme !== 'undefined' && theme === 'dark') { %>
+            <i class="fa-solid fa-sun"></i>
+          <% } else { %>
+            <i class="fa-solid fa-moon"></i>
+          <% } %>
+        </button>
+      </form>
+    </div>
+
+    <% if (u) { %>
+    <div class="dropdown topbar-user-dropdown">
+      <button class="topbar-user-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
+        <span class="avatar-circle"><%= initials %></span>
+        <span class="topbar-user-meta d-none d-sm-flex flex-column text-truncate">
+          <span class="topbar-user-name text-truncate"><%= u.name %></span>
+          <% if (roleLabel) { %><span class="topbar-user-role text-truncate"><%= roleLabel %></span><% } %>
+        </span>
+        <i class="fa-solid fa-chevron-down topbar-user-chevron" aria-hidden="true"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow">
+        <li>
+          <form action="/auth/logout" method="post" class="px-3 py-1">
+            <button class="dropdown-item text-danger p-0 border-0 bg-transparent w-100 text-start" type="submit">
+              <i class="fa-solid fa-right-from-bracket me-2"></i>تسجيل الخروج
+            </button>
+          </form>
+        </li>
+      </ul>
+    </div>
+    <% } %>
+  </div>
+</header>

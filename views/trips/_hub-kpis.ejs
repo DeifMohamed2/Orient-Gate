@@ -1,0 +1,74 @@
+<div class="kpi-grid kpi-grid-compact trip-hub-kpis mb-3">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-chair"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">مقاعد محجوزة</div>
+      <% if (seatStats.total > 0) { %>
+        <div class="kpi-value kpi-value-sm"><%= seatStats.reserved %> / <%= seatStats.total %></div>
+        <div class="kpi-hint"><%= seatStats.percentSold %>% محجوز</div>
+      <% } else { %>
+        <div class="kpi-value kpi-value-sm"><%= seatStats.reserved %></div>
+        <div class="kpi-hint">ديناميكي من الحجوزات</div>
+      <% } %>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-user-group"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المعتمرين</div>
+      <div class="kpi-value kpi-value-sm"><%= reservationStats.totalPassengers %></div>
+      <div class="kpi-hint"><%= reservationStats.total %> حجز</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المحصل</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.collectedRevenue) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المستحق</div>
+      <div class="kpi-value kpi-value-sm <%= profitability.outstanding > 0 ? 'text-danger' : '' %>"><%= formatCurrency(profitability.outstanding) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-receipt"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المصروفات</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.totalExpenses) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">صافي الربح</div>
+      <div class="kpi-value kpi-value-sm <%= profitability.netProfit < 0 ? 'text-danger' : '' %>"><%= formatCurrency(profitability.netProfit) %></div>
+      <% if (profitability.costSummary && !profitability.costSummary.hasPaidBookings) { %>
+        <div class="kpi-hint">يُحسب بعد حجوزات مدفوعة</div>
+        <% if (profitability.costSummary.projectedTripCosts > 0) { %>
+        <div class="kpi-hint text-muted">تكاليف متوقعة: <%= formatCurrency(profitability.costSummary.projectedTripCosts) %></div>
+        <% } %>
+      <% } else { %>
+        <div class="kpi-hint"><%= profitability.profitPercent %>%</div>
+      <% } %>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-bed"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إشغال الأسرة</div>
+      <div class="kpi-value kpi-value-sm"><%= roomOccupancy.occupied %> / <%= roomOccupancy.total %></div>
+      <div class="kpi-hint"><%= roomOccupancy.percent %>% إشغال • <%= roomOccupancy.availableBeds || 0 %> متاح</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-chart-line"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">الإيرادات</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.grossRevenue) %></div>
+    </div>
+  </div>
+</div>

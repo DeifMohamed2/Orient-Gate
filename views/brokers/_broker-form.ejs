@@ -1,0 +1,32 @@
+<% const b = broker || {}; %>
+<div class="form-section">
+  <h3 class="form-section-title"><i class="fa-solid fa-user-tie me-2 text-primary"></i>بيانات السمسار</h3>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">الاسم <span class="text-danger">*</span></label>
+      <input class="form-control" name="name" value="<%= b.name || '' %>" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">الشركة / المكتب</label>
+      <input class="form-control" name="company" value="<%= b.company || '' %>" placeholder="اسم المكتب أو الشركة">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">الهواتف (فاصلة بين الأرقام)</label>
+      <input class="form-control" name="phones" value="<%= (b.phones || []).join(', ') %>" placeholder="01xxxxxxxxx">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">البريد الإلكتروني</label>
+      <input type="email" class="form-control" name="email" value="<%= b.email || '' %>">
+    </div>
+    <div class="col-md-12">
+      <label class="form-label">ملاحظات</label>
+      <textarea class="form-control" name="notes" rows="3"><%= b.notes || '' %></textarea>
+    </div>
+    <div class="col-md-4">
+      <label class="form-check-label d-block">
+        <input type="checkbox" class="form-check-input me-2" name="isActive" value="true" <%= !b._id || b.isActive ? 'checked' : '' %>>
+        نشط
+      </label>
+    </div>
+  </div>
+</div>

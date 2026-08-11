@@ -1,0 +1,636 @@
+<% const marginClass = (pct) => {
+  if (pct < 0) return 'finance-margin-badge--danger';
+  if (pct < 15) return 'finance-margin-badge--warn';
+  return 'finance-margin-badge--ok';
+}; %>
+
+<div class="finance-hub-header finance-enterprise-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">المركز المالي</h1>
+    <p class="finance-enterprise-subtitle">نظرة شاملة على الإيرادات والتكاليف — الربح الحقيقي يشمل تكلفة الرحلات (تأشيرة، طيران، سكن) بالإضافة للمصروفات التشغيلية</p>
+  </div>
+  <div class="page-actions finance-enterprise-actions no-print">
+    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#financeExpenseModal"><i class="fa-solid fa-minus me-1"></i> تسجيل مصروف</button>
+    <div class="dropdown">
+      <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fa-solid fa-download me-1"></i> تصدير</button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'profitability' }) %>">ربحية الرحلات</a></li>
+        <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'invoices' }) %>">فواتير</a></li>
+        <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'outstanding' }) %>">مستحقات</a></li>
+      </ul>
+    </div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> طباعة</button>
+  </div>
+</div>
+
+<form class="card finance-hub-filters no-print" method="GET" id="financeFilterForm">
+  <input type="hidden" name="tab" id="financeActiveTab" value="<%= activeTab %>">
+  <div class="finance-hub-filters-inner">
+    <div class="finance-hub-filter-search">
+      <i class="fa-solid fa-magnifying-glass finance-hub-filter-icon" aria-hidden="true"></i>
+      <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث برقم الفاتورة، العميل، أو الدفعة...">
+    </div>
+    <div class="finance-hub-filter-field">
+      <select name="tripId" class="form-select">
+        <option value="">كل الرحلات (<%= trips.length %>)</option>
+        <% trips.forEach(t => { %>
+          <option value="<%= t._id %>" <%= filters.tripId && String(filters.tripId) === String(t._id) ? 'selected' : '' %>>
+            <%= t.name %><% if (t.status !== 'active') { %> — <%= statusLabel(t.status) %><% } %>
+          </option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="finance-hub-filter-field finance-hub-filter-date">
+      <input type="date" name="fromDate" id="financeFromDate" class="form-control" value="<%= filters.fromDate || '' %>" title="من تاريخ">
+    </div>
+    <div class="finance-hub-filter-field finance-hub-filter-date">
+      <input type="date" name="toDate" id="financeToDate" class="form-control" value="<%= filters.toDate || '' %>" title="إلى تاريخ">
+    </div>
+    <div class="finance-hub-date-presets">
+      <button type="button" class="btn btn-outline-primary btn-sm finance-date-preset" data-preset="this-month">هذا الشهر</button>
+      <button type="button" class="btn btn-outline-primary btn-sm finance-date-preset" data-preset="last-month">الشهر الماضي</button>
+      <button type="button" class="btn btn-outline-primary btn-sm finance-date-preset" data-preset="clear">الكل</button>
+    </div>
+    <div class="finance-hub-filter-field">
+      <select name="tripStatus" class="form-select">
+        <option value="">كل حالات الرحلة</option>
+        <% ['active','completed','cancelled'].forEach(s => { %>
+          <option value="<%= s %>" <%= filters.tripStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="finance-hub-filter-field">
+      <select name="costStatus" class="form-select">
+        <option value="">كل حالات التكلفة</option>
+        <option value="configured" <%= filters.costStatus === 'configured' ? 'selected' : '' %>>تكلفة مُدخلة</option>
+        <option value="missing" <%= filters.costStatus === 'missing' ? 'selected' : '' %>>تكلفة غير مُدخلة</option>
+      </select>
+    </div>
+    <div class="finance-hub-filter-field">
+      <select name="invoiceStatus" class="form-select">
+        <option value="">كل حالات الفاتورة</option>
+        <% ['unpaid','partial','paid','refunded'].forEach(s => { %>
+          <option value="<%= s %>" <%= filters.invoiceStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="finance-hub-filter-field">
+      <select name="paymentMethod" class="form-select">
+        <option value="">كل طرق الدفع</option>
+        <% ['cash','bank','card','transfer','other'].forEach(m => { %>
+          <option value="<%= m %>" <%= filters.paymentMethod === m ? 'selected' : '' %>><%= paymentMethodLabel(m) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="finance-hub-filter-field">
+      <select name="expenseCategory" class="form-select">
+        <option value="">كل فئات المصروف</option>
+        <% ['hotel','flight','visa','transport','guide','insurance','other'].forEach(c => { %>
+          <option value="<%= c %>" <%= filters.expenseCategory === c ? 'selected' : '' %>><%= expenseCategoryLabel(c) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="finance-hub-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> تطبيق</button>
+      <% if (hasActiveFilters) { %>
+        <a href="/finance" class="btn btn-outline-primary">مسح</a>
+      <% } %>
+    </div>
+  </div>
+  <div class="finance-hub-stats">
+    <span class="trip-rail-count"><%= summary.invoiceCount %> فاتورة</span>
+    <span class="text-muted small">•</span>
+    <span class="text-muted small"><%= summary.paymentCount %> دفعة</span>
+    <span class="text-muted small">•</span>
+    <span class="text-muted small"><%= summary.expenseCount %> مصروف</span>
+    <span class="text-muted small">•</span>
+    <span class="text-muted small"><%= summary.pendingCount %> فاتورة معلقة</span>
+    <span class="text-muted small">•</span>
+    <span class="text-muted small"><%= tripSummaries.length %> رحلة</span>
+  </div>
+</form>
+
+<div class="finance-kpi-section mb-4">
+  <div class="finance-kpi-row-label"><i class="fa-solid fa-chart-line me-1"></i> الإيرادات والتحصيل</div>
+  <div class="kpi-grid kpi-grid-compact finance-kpi-row">
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="مجموع إجماليات كل الفواتير (مدفوعة + جزئية + غير مدفوعة)">إيرادات محجوزة</div>
+        <div class="kpi-value kpi-value-sm"><%= formatCurrency(summary.grossRevenue) %></div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="المبالغ المحصلة فعلياً من العملاء">المحصل</div>
+        <div class="kpi-value kpi-value-sm text-success"><%= formatCurrency(summary.collected) %></div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="مجموع المتبقي على الفواتير">المستحق</div>
+        <div class="kpi-value kpi-value-sm <%= summary.outstanding > 0 ? 'text-warning' : '' %>"><%= formatCurrency(summary.outstanding) %></div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-percent"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="المحصل ÷ الإيرادات المحجوزة">نسبة التحصيل</div>
+        <div class="kpi-value kpi-value-sm"><%= summary.collectionRate %>%</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-file-circle-exclamation"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label">فواتير معلقة</div>
+        <div class="kpi-value kpi-value-sm"><%= summary.pendingCount %></div>
+        <div class="kpi-hint"><%= summary.unpaidCount %> غير مدفوع • <%= summary.partialCount %> جزئي</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="finance-kpi-row-label mt-3"><i class="fa-solid fa-coins me-1"></i> التكاليف والربحية</div>
+  <div class="kpi-grid kpi-grid-compact finance-kpi-row">
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="تكلفة المعتمرين من trip.costs (تأشيرة + طيران + سكن)">تكلفة الرحلات</div>
+        <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.tripCosts) %></div>
+        <div class="kpi-hint">معتمرين + مشرفين</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-receipt"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="مصروفات تشغيلية مسجلة">مصروفات تشغيلية</div>
+        <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.operationalExpenses) %></div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-calculator"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="تكلفة الرحلات + مصروفات تشغيلية">إجمالي التكلفة</div>
+        <div class="kpi-value kpi-value-sm text-danger"><%= formatCurrency(summary.totalCosts) %></div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon kpi-card--highlight">
+      <div class="kpi-icon"><i class="fa-solid fa-chart-pie"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="المحصل − إجمالي التكلفة (يشمل تكلفة الرحلات)">صافي الربح الحقيقي</div>
+        <div class="kpi-value kpi-value-sm <%= summary.trueProfit < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(summary.trueProfit) %></div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="صافي الربح ÷ المحصل">هامش الربح</div>
+        <div class="kpi-value kpi-value-sm"><span class="finance-margin-badge <%= marginClass(summary.marginPercent) %>"><%= summary.marginPercent %>%</span></div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-card--icon">
+      <div class="kpi-icon"><i class="fa-solid fa-wallet"></i></div>
+      <div class="kpi-body">
+        <div class="kpi-label" title="المحصل − مصروفات تشغيلية فقط (بدون تكلفة الرحلات)">الربح النقدي</div>
+        <div class="kpi-value kpi-value-sm <%= summary.cashProfit < 0 ? 'text-danger' : '' %>"><%= formatCurrency(summary.cashProfit) %></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4 finance-enterprise-pnl-row">
+  <div class="col-lg-6">
+    <div class="card finance-enterprise-pnl h-100">
+      <div class="card-header"><i class="fa-solid fa-scale-balanced me-2"></i>قائمة الدخل التشغيلية</div>
+      <div class="card-body p-0">
+        <div class="finance-enterprise-pnl-row-item">
+          <span class="finance-enterprise-pnl-label">إيرادات محجوزة (كل الفواتير)</span>
+          <span class="finance-enterprise-pnl-amount"><%= formatCurrency(summary.grossRevenue) %></span>
+        </div>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--in">
+          <span class="finance-enterprise-pnl-label">المحصل فعلياً</span>
+          <span class="finance-enterprise-pnl-amount text-success"><%= formatCurrency(summary.collected) %></span>
+        </div>
+        <div class="finance-enterprise-pnl-row-item">
+          <span class="finance-enterprise-pnl-label">المستحق على العملاء</span>
+          <span class="finance-enterprise-pnl-amount <%= summary.outstanding > 0 ? 'text-warning' : '' %>"><%= formatCurrency(summary.outstanding) %></span>
+        </div>
+        <div class="finance-enterprise-pnl-divider"></div>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--deduct">
+          <span class="finance-enterprise-pnl-label">(−) تكلفة المعتمرين (تأشيرة + طيران + سكن)</span>
+          <span class="finance-enterprise-pnl-amount text-danger"><%= formatCurrency(summary.passengerCosts) %></span>
+        </div>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--deduct">
+          <span class="finance-enterprise-pnl-label">(−) بدل مشرفين وتشغيل</span>
+          <span class="finance-enterprise-pnl-amount text-danger"><%= formatCurrency(summary.tripLevelCosts) %></span>
+        </div>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--deduct">
+          <span class="finance-enterprise-pnl-label">(−) مصروفات تشغيلية</span>
+          <span class="finance-enterprise-pnl-amount text-danger"><%= formatCurrency(summary.operationalExpenses) %></span>
+        </div>
+        <div class="finance-enterprise-pnl-divider"></div>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--total">
+          <span class="finance-enterprise-pnl-label fw-bold">(=) صافي الربح الحقيقي</span>
+          <span class="finance-enterprise-pnl-amount fw-bold <%= summary.trueProfit < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(summary.trueProfit) %></span>
+        </div>
+        <div class="finance-enterprise-pnl-row-item finance-enterprise-pnl-row-item--secondary">
+          <span class="finance-enterprise-pnl-label text-muted small">الربح النقدي (محصل − مصروفات فقط)</span>
+          <span class="finance-enterprise-pnl-amount text-muted small"><%= formatCurrency(summary.cashProfit) %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card finance-aging-card h-100 no-print">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-hourglass-half me-2"></i>أعمار المستحقات</span>
+        <a href="/finance<%= buildQueryString(filters, { tab: 'outstanding', page: 1 }) %>" class="btn btn-outline-primary btn-sm">عرض المستحقات</a>
+      </div>
+      <div class="card-body">
+        <% if (aging.totalAmount > 0) { %>
+        <div class="finance-aging-bar mb-3">
+          <% aging.buckets.forEach(b => { %>
+            <% const pct = aging.totalAmount > 0 ? Math.round((b.amount / aging.totalAmount) * 100) : 0; %>
+            <% if (pct > 0) { %>
+              <div class="finance-aging-bar-segment" style="width:<%= pct %>%" title="<%= b.label %>: <%= formatCurrency(b.amount) %>"></div>
+            <% } %>
+          <% }) %>
+        </div>
+        <div class="finance-aging-legend">
+          <% aging.buckets.forEach(b => { %>
+            <div class="finance-aging-legend-item">
+              <span class="finance-aging-legend-label"><%= b.label %></span>
+              <span class="finance-aging-legend-value"><%= formatCurrency(b.amount) %></span>
+              <span class="finance-aging-legend-count text-muted small">(<%= b.count %> فاتورة)</span>
+            </div>
+          <% }) %>
+        </div>
+        <div class="finance-aging-total mt-3 pt-3 border-top">
+          <span class="fw-semibold">إجمالي المستحقات</span>
+          <span class="fw-bold text-warning"><%= formatCurrency(aging.totalAmount) %></span>
+        </div>
+        <% } else { %>
+        <div class="finance-empty finance-empty--compact">
+          <i class="fa-solid fa-check-circle text-success"></i>
+          <p>لا توجد مستحقات معلقة</p>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="finance-enterprise-charts no-print mb-4">
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card dash-chart-card h-100">
+        <div class="card-header">الإيرادات مقابل المصروفات (شهرياً)</div>
+        <div class="card-body"><div id="financeRevenueCostsChart"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card dash-chart-card h-100">
+        <div class="card-header">معدل التحصيل (شهرياً)</div>
+        <div class="card-body"><div id="financeCollectionChart"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card dash-chart-card h-100">
+        <div class="card-header">ربحية الرحلات</div>
+        <div class="card-body"><div id="financeTripProfitChart"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card dash-chart-card h-100">
+        <div class="card-header">توزيع التكاليف</div>
+        <div class="card-body"><div id="financeCostBreakdownChart"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if (tripSummaries.length) { %>
+<div class="card table-card mb-4 finance-trip-matrix">
+  <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span><i class="fa-solid fa-plane me-2"></i>مصفوفة ربحية الرحلات</span>
+    <span class="text-muted small"><%= tripSummaries.length %> رحلة — انقر على الصف لعرض تفاصيل التكلفة</span>
+  </div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-hover mb-0 finance-trip-matrix-table" id="financeTripMatrixTable">
+      <thead>
+        <tr>
+          <th class="finance-sortable" data-sort="name">الرحلة</th>
+          <th class="finance-sortable text-end" data-sort="grossRevenue">إيرادات</th>
+          <th class="finance-sortable text-end" data-sort="collected">محصل</th>
+          <th class="finance-sortable text-end" data-sort="outstanding">مستحق</th>
+          <th class="finance-sortable text-end" data-sort="tripCosts">تكلفة</th>
+          <th class="finance-sortable text-end" data-sort="operationalExpenses">مصروفات</th>
+          <th class="finance-sortable text-end" data-sort="totalCosts">إجمالي تكلفة</th>
+          <th class="finance-sortable text-end" data-sort="trueProfit">صافي ربح</th>
+          <th class="finance-sortable text-end" data-sort="marginPercent">هامش</th>
+          <th class="finance-sortable text-end" data-sort="reservationCount">حجوزات</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% tripSummaries.forEach((s, idx) => { %>
+          <tr class="finance-trip-matrix-row" data-trip-idx="<%= idx %>" tabindex="0" role="button" aria-expanded="false">
+            <td class="fw-semibold">
+              <i class="fa-solid fa-chevron-left finance-trip-expand-icon me-1 text-muted small"></i>
+              <%= s.trip.name %>
+              <% if (s.trip.status !== 'active') { %>
+                <span class="badge bg-light text-dark ms-1"><%= statusLabel(s.trip.status) %></span>
+              <% } %>
+              <% if (!s.costsConfigured) { %>
+                <span class="badge bg-warning text-dark ms-1" title="لم تُدخل تكلفة الرحلة">بدون تكلفة</span>
+              <% } %>
+            </td>
+            <td class="text-end" data-value="<%= s.grossRevenue %>"><%= formatCurrency(s.grossRevenue) %></td>
+            <td class="text-end text-success" data-value="<%= s.collected %>"><%= formatCurrency(s.collected) %></td>
+            <td class="text-end <%= s.outstanding > 0 ? 'text-warning fw-semibold' : '' %>" data-value="<%= s.outstanding %>"><%= formatCurrency(s.outstanding) %></td>
+            <td class="text-end text-danger" data-value="<%= s.tripCosts %>"><%= formatCurrency(s.tripCosts) %></td>
+            <td class="text-end text-danger" data-value="<%= s.operationalExpenses %>"><%= formatCurrency(s.operationalExpenses) %></td>
+            <td class="text-end text-danger fw-semibold" data-value="<%= s.totalCosts %>"><%= formatCurrency(s.totalCosts) %></td>
+            <td class="text-end fw-semibold <%= s.trueProfit < 0 ? 'text-danger' : 'text-success' %>" data-value="<%= s.trueProfit %>"><%= formatCurrency(s.trueProfit) %></td>
+            <td class="text-end" data-value="<%= s.marginPercent %>"><span class="finance-margin-badge <%= marginClass(s.marginPercent) %>"><%= s.marginPercent %>%</span></td>
+            <td class="text-end text-muted" data-value="<%= s.reservationCount %>">
+              <%= s.reservationCount %>
+              <% if (s.reservationStats) { %>
+                <span class="d-block small text-muted"><%= s.reservationStats.paid || 0 %> مدفوع • <%= s.reservationStats.unpaid || 0 %> غير مدفوع</span>
+              <% } %>
+            </td>
+            <td>
+              <a href="/trips/<%= s.trip._id %>?tab=finance" class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation()">مالية</a>
+            </td>
+          </tr>
+          <tr class="finance-trip-detail-row d-none" data-detail-for="<%= idx %>">
+            <td colspan="11" class="finance-trip-detail-cell">
+              <div class="finance-trip-detail-grid">
+                <div><span class="text-muted">تأشيرة:</span> <strong><%= formatCurrency(s.breakdown.visa) %></strong></div>
+                <div><span class="text-muted">طيران:</span> <strong><%= formatCurrency(s.breakdown.flight) %></strong></div>
+                <div><span class="text-muted">سكن مكة:</span> <strong><%= formatCurrency(s.breakdown.accommodationMecca) %></strong></div>
+                <div><span class="text-muted">سكن المدينة:</span> <strong><%= formatCurrency(s.breakdown.accommodationMedina) %></strong></div>
+                <div><span class="text-muted">مشرف:</span> <strong><%= formatCurrency(s.breakdown.supervisor) %></strong></div>
+                <div><span class="text-muted">مساعد:</span> <strong><%= formatCurrency(s.breakdown.assistant) %></strong></div>
+                <div><span class="text-muted">تكلفة معتمرين:</span> <strong><%= formatCurrency(s.passengerCosts) %></strong></div>
+                <div><span class="text-muted">مصروفات:</span> <strong><%= formatCurrency(s.operationalExpenses) %></strong></div>
+                <% if (!s.hasPaidBookings && s.projectedTripCosts > 0) { %>
+                <div class="col-span-all text-muted small"><i class="fa-solid fa-info-circle me-1"></i>تكاليف مشرفين متوقعة: <%= formatCurrency(s.projectedTripCosts) %> — الربح يُحسب بعد وجود حجوزات مدفوعة</div>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr class="finance-trip-matrix-totals">
+          <td class="fw-bold">الإجمالي</td>
+          <td class="text-end fw-bold"><%= formatCurrency(matrixTotals.grossRevenue) %></td>
+          <td class="text-end fw-bold text-success"><%= formatCurrency(matrixTotals.collected) %></td>
+          <td class="text-end fw-bold text-warning"><%= formatCurrency(matrixTotals.outstanding) %></td>
+          <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.tripCosts) %></td>
+          <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.operationalExpenses) %></td>
+          <td class="text-end fw-bold text-danger"><%= formatCurrency(matrixTotals.totalCosts) %></td>
+          <td class="text-end fw-bold <%= matrixTotals.trueProfit < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(matrixTotals.trueProfit) %></td>
+          <td class="text-end">—</td>
+          <td class="text-end fw-bold"><%= matrixTotals.reservationCount %></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<div class="finance-ledger-toolbar no-print">
+  <ul class="nav nav-tabs finance-ledger-tabs mb-0" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link <%= activeTab === 'invoices' ? 'active' : '' %>" href="/finance<%= buildQueryString(filters, { tab: 'invoices', page: 1 }) %>">فواتير</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link <%= activeTab === 'payments' ? 'active' : '' %>" href="/finance<%= buildQueryString(filters, { tab: 'payments', page: 1 }) %>">مدفوعات</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link <%= activeTab === 'expenses' ? 'active' : '' %>" href="/finance<%= buildQueryString(filters, { tab: 'expenses', page: 1 }) %>">مصروفات</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link <%= activeTab === 'outstanding' ? 'active' : '' %>" href="/finance<%= buildQueryString(filters, { tab: 'outstanding', page: 1 }) %>">مستحقات</a>
+    </li>
+  </ul>
+  <div class="dropdown finance-export-dropdown">
+    <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="fa-solid fa-download me-1"></i> تصدير CSV
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'profitability' }) %>">ربحية الرحلات</a></li>
+      <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'invoices' }) %>">فواتير</a></li>
+      <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'payments' }) %>">مدفوعات</a></li>
+      <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'expenses' }) %>">مصروفات</a></li>
+      <li><a class="dropdown-item" href="/finance/export<%= buildQueryString(filters, { type: 'outstanding' }) %>">مستحقات</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="card table-card finance-ledger-card">
+  <div class="card-body p-0">
+    <% if (ledger.items.length) { %>
+    <div class="table-responsive">
+      <% if (activeTab === 'payments') { %>
+      <table class="table table-hover mb-0 finance-table">
+        <thead>
+          <tr>
+            <th>التاريخ</th>
+            <th>رقم الدفعة</th>
+            <th>الرحلة</th>
+            <th>الحجز</th>
+            <th>المبلغ</th>
+            <th>الطريقة</th>
+            <th>ملاحظات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% ledger.items.forEach(p => { %>
+            <tr>
+              <td><%= formatDate(p.paymentDate) %></td>
+              <td class="text-muted small"><%= p.paymentNumber %></td>
+              <td><%= p.tripId?.name || '—' %></td>
+              <td>
+                <% if (p.reservationId) { %>
+                  <a href="/reservations/<%= p.reservationId._id %>" class="reservations-link"><%= p.reservationId.reservationNumber %></a>
+                <% } else { %>—<% } %>
+              </td>
+              <td class="fw-semibold <%= p.isRefund || p.amount < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(p.amount) %></td>
+              <td><%= paymentMethodLabel(p.method) %></td>
+              <td class="text-muted small"><%= p.notes || '—' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr class="finance-ledger-totals">
+            <td colspan="4" class="fw-semibold">إجمالي (<%= ledgerTotals.count %> سجل)</td>
+            <td class="fw-bold <%= ledgerTotals.total < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(ledgerTotals.total) %></td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <% } else if (activeTab === 'expenses') { %>
+      <table class="table table-hover mb-0 finance-table">
+        <thead>
+          <tr>
+            <th>التاريخ</th>
+            <th>الرحلة</th>
+            <th>الفئة</th>
+            <th>الوصف</th>
+            <th>المورد</th>
+            <th>المبلغ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% ledger.items.forEach(e => { %>
+            <tr>
+              <td><%= formatDate(e.expenseDate) %></td>
+              <td><%= e.tripId?.name || '—' %></td>
+              <td><span class="badge bg-light text-dark"><%= expenseCategoryLabel(e.category) %></span></td>
+              <td><%= e.description || '—' %></td>
+              <td class="text-muted"><%= e.supplier || '—' %></td>
+              <td class="fw-semibold text-danger"><%= formatCurrency(e.amount) %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr class="finance-ledger-totals">
+            <td colspan="5" class="fw-semibold">إجمالي (<%= ledgerTotals.count %> سجل)</td>
+            <td class="fw-bold text-danger"><%= formatCurrency(ledgerTotals.total) %></td>
+          </tr>
+        </tfoot>
+      </table>
+      <% } else { %>
+      <table class="table table-hover mb-0 finance-table">
+        <thead>
+          <tr>
+            <th>رقم الفاتورة</th>
+            <th>التاريخ</th>
+            <th>الرحلة</th>
+            <th>العميل</th>
+            <th>الإجمالي</th>
+            <th>المدفوع</th>
+            <th>المتبقي</th>
+            <th>الحالة</th>
+            <th>الحجز</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% ledger.items.forEach(i => { %>
+            <tr>
+              <td class="fw-semibold"><%= i.invoiceNumber %></td>
+              <td><%= formatDate(i.issueDate) %></td>
+              <td><%= i.tripId?.name || '—' %></td>
+              <td><%= i.customerName || '—' %></td>
+              <td><%= formatCurrency(i.total) %></td>
+              <td><%= formatCurrency(i.paid) %><% if (i.paid > i.total) { %> <span class="badge bg-warning text-dark" title="مدفوع أكثر من الإجمالي">تجاوز</span><% } %></td>
+              <td class="<%= i.balance > 0 ? 'text-danger fw-semibold' : '' %>"><%= formatCurrency(i.balance) %></td>
+              <td><%- include('../partials/badge', { status: i.status }) %></td>
+              <td>
+                <% if (i.reservationId) { %>
+                  <a href="/reservations/<%= i.reservationId._id %>" class="reservations-link"><%= i.reservationId.reservationNumber %></a>
+                <% } else { %>—<% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+        <tfoot>
+          <tr class="finance-ledger-totals">
+            <td colspan="4" class="fw-semibold">إجمالي (<%= ledgerTotals.count %> سجل)</td>
+            <td class="fw-bold"><%= formatCurrency(ledgerTotals.total) %></td>
+            <td class="fw-bold text-success"><%= formatCurrency(ledgerTotals.paid) %></td>
+            <td class="fw-bold text-warning"><%= formatCurrency(ledgerTotals.balance) %></td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <% } %>
+    </div>
+    <% if (pagination.totalPages > 1) { %>
+    <div class="reservations-pagination p-3 no-print">
+      <span class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %> (<%= pagination.totalCount %> سجل)</span>
+      <div class="d-flex gap-2">
+        <% if (pagination.hasPrev) { %>
+          <a href="/finance<%= buildQueryString(filters, { page: pagination.page - 1 }) %>" class="btn btn-outline-primary btn-sm">السابق</a>
+        <% } %>
+        <% if (pagination.hasNext) { %>
+          <a href="/finance<%= buildQueryString(filters, { page: pagination.page + 1 }) %>" class="btn btn-outline-primary btn-sm">التالي</a>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+    <% } else { %>
+    <div class="finance-empty">
+      <i class="fa-solid fa-folder-open"></i>
+      <p>لا توجد سجلات<%= hasActiveFilters ? ' مطابقة للفلاتر' : '' %></p>
+      <% if (hasActiveFilters) { %>
+        <a href="/finance" class="btn btn-outline-primary btn-sm">مسح الفلاتر</a>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="modal fade no-print" id="financeExpenseModal" tabindex="-1" aria-labelledby="financeExpenseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="/finance/expenses" class="needs-validation" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title" id="financeExpenseModalLabel"><i class="fa-solid fa-minus me-1"></i> تسجيل مصروف</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">الرحلة <span class="text-danger">*</span></label>
+            <select name="tripId" class="form-select" required>
+              <option value="">اختر الرحلة...</option>
+              <% trips.filter(t => t.status === 'active').forEach(t => { %>
+                <option value="<%= t._id %>" <%= filters.tripId && String(filters.tripId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+              <input type="number" name="amount" class="form-control" min="1" step="1" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">الفئة</label>
+              <select name="category" class="form-select">
+                <% ['hotel','flight','visa','transport','guide','insurance','other'].forEach(c => { %>
+                  <option value="<%= c %>"><%= expenseCategoryLabel(c) %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">التاريخ</label>
+              <input type="date" name="expenseDate" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">المورد</label>
+              <input type="text" name="supplier" class="form-control" placeholder="اسم المورد">
+            </div>
+            <div class="col-12">
+              <label class="form-label">الوصف</label>
+              <input type="text" name="description" class="form-control" placeholder="وصف المصروف">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="btn btn-primary">حفظ المصروف</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="financeChartData" hidden aria-hidden="true"><%= JSON.stringify(chartData).replace(/</g, '\\u003c') %></div>
+
+<script src="/js/finance-hub.js"></script>
+<script src="/js/finance-hub-charts.js"></script>

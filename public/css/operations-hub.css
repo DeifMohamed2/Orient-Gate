@@ -1,0 +1,169 @@
+/* Operations hub — visa & transport */
+.ops-hub-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.ops-hub-sub {
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 4px 0 0;
+}
+.ops-hub-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ops-status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.ops-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ops-status-chip:hover {
+  background: var(--primary-soft);
+  border-color: rgba(14, 124, 102, 0.25);
+  color: var(--primary);
+}
+.ops-status-chip.is-active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.ops-status-chip strong {
+  font-weight: 800;
+}
+
+.ops-filters {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.ops-filters-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px;
+  align-items: center;
+}
+.ops-filter-search {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+.ops-filter-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-4);
+  pointer-events: none;
+}
+.ops-filter-search .form-control { padding-right: 36px; }
+.ops-filter-field {
+  flex: 0 1 170px;
+  min-width: 140px;
+}
+.ops-filter-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ops-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 14px;
+  flex-wrap: wrap;
+}
+
+.ops-table-card {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.ops-table thead th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.ops-link {
+  color: var(--text-1);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ops-link:hover { color: var(--primary); }
+.ops-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 220px;
+}
+.ops-inline-form .form-select-sm { min-width: 120px; }
+.ops-inline-form .form-control-sm { min-width: 100px; max-width: 140px; }
+.ops-row-actions { min-width: 200px; }
+.ops-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.ops-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--text-3);
+  text-align: center;
+}
+.ops-empty i { font-size: 2.5rem; opacity: 0.35; }
+.ops-empty p { margin: 0; font-size: 14px; }
+
+.ops-profile-back { margin-top: 4px; }
+.ops-profile-header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.ops-tabs .nav-link {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.ops-tabs .nav-link.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+.sales-booking-row { cursor: pointer; }
+
+@media (max-width: 768px) {
+  .ops-filters-inner { flex-direction: column; align-items: stretch; }
+  .ops-filter-field { flex: 1 1 100%; min-width: 100%; }
+  .ops-filter-search { min-width: 100%; }
+  .ops-inline-form { flex-direction: column; align-items: stretch; }
+  .ops-inline-form .form-select-sm,
+  .ops-inline-form .form-control-sm { max-width: none; width: 100%; }
+}

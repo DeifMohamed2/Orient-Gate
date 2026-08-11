@@ -1,0 +1,18 @@
+<h2 class="auth-form-title">تسجيل الدخول</h2>
+<p class="auth-form-sub">أدخل بياناتك للوصول إلى لوحة التحكم</p>
+
+<% if (error) { %>
+<script type="application/json" id="ogLoginError"><%- JSON.stringify(error) %></script>
+<% } %>
+
+<form method="POST" action="/auth/login" class="auth-form">
+  <div class="auth-field">
+    <label for="email">البريد الإلكتروني</label>
+    <input type="email" id="email" name="email" required placeholder="admin@orientgate.com" autocomplete="email">
+  </div>
+  <div class="auth-field">
+    <label for="password">كلمة المرور</label>
+    <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <button type="submit" class="auth-submit">دخول</button>
+</form>

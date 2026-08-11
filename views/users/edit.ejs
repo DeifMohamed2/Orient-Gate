@@ -1,0 +1,13 @@
+<%- include('../partials/page-header', { pageTitle: 'تعديل المستخدم', pageSubtitle: user.name }) %>
+<div class="card">
+  <div class="card-body">
+    <form method="POST" action="/users/<%= user._id %>">
+      <input type="hidden" name="_method" value="PUT">
+      <%- include('_user-form', { user, roleList, roleLabel, formatDate }) %>
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i> حفظ التعديلات</button>
+        <a href="/users" class="btn btn-outline-primary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>

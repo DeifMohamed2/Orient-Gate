@@ -1,0 +1,166 @@
+<div class="ops-hub-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">النقل</h1>
+    <p class="ops-hub-sub">متابعة تسكين النقل والحافلات</p>
+  </div>
+  <div class="page-actions ops-hub-actions">
+    <div class="dropdown">
+      <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="fa-solid fa-file-export me-1"></i> تصدير Excel
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="/transport/export<%= buildQueryString(filters) %>">تصدير النتائج الحالية</a></li>
+        <li><a class="dropdown-item" href="/transport/export?scope=all">تصدير الكل</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-bus"></i></div>
+    <div class="kpi-body"><div class="kpi-label">النتائج</div><div class="kpi-value"><%= pagination.totalCount %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+    <div class="kpi-body"><div class="kpi-label">قيد الانتظار</div><div class="kpi-value"><%= statusCounts.pending || 0 %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-user-group"></i></div>
+    <div class="kpi-body"><div class="kpi-label">مُخصص</div><div class="kpi-value"><%= statusCounts.assigned || 0 %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="kpi-body"><div class="kpi-label">مؤكد</div><div class="kpi-value"><%= statusCounts.confirmed || 0 %></div></div>
+  </div>
+</div>
+
+<div class="ops-status-chips mb-3">
+  <% transportStatuses.forEach(s => { if (!(statusCounts[s])) return; %>
+    <a href="/transport<%= buildQueryString({ ...filters, transportStatus: s, page: 1 }) %>" class="ops-status-chip<%= filters.transportStatus === s ? ' is-active' : '' %>">
+      <%= statusLabel(s) %> <strong><%= statusCounts[s] %></strong>
+    </a>
+  <% }) %>
+  <% if (filters.transportStatus) { %>
+    <a href="/transport<%= buildQueryString({ ...filters, transportStatus: '', page: 1 }) %>" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+  <% } %>
+</div>
+
+<form class="card ops-filters" method="GET" id="transportFilterForm">
+  <div class="ops-filters-inner">
+    <div class="ops-filter-search">
+      <i class="fa-solid fa-magnifying-glass ops-filter-icon"></i>
+      <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث بالاسم، الجواز، المجموعة، أو رقم الحجز...">
+    </div>
+    <div class="ops-filter-field">
+      <select name="tripId" class="form-select">
+        <option value="">كل الرحلات</option>
+        <% trips.forEach(t => { %>
+          <option value="<%= t._id %>" <%= filters.tripId === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="ops-filter-field">
+      <select name="transportStatus" class="form-select">
+        <option value="">كل الحالات</option>
+        <% transportStatuses.forEach(s => { %>
+          <option value="<%= s %>" <%= filters.transportStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="ops-filter-field">
+      <select name="transportGroup" class="form-select">
+        <option value="">كل المجموعات</option>
+        <% groups.forEach(g => { %>
+          <option value="<%= g %>" <%= filters.transportGroup === g ? 'selected' : '' %>><%= g %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="ops-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> تطبيق</button>
+      <% if (hasActiveFilters) { %><a href="/transport" class="btn btn-outline-primary">مسح</a><% } %>
+    </div>
+  </div>
+  <div class="ops-stats">
+    <span class="trip-rail-count"><%= pagination.totalCount %> نتيجة</span>
+    <% if (groups.length) { %>
+      <span class="text-muted small">•</span>
+      <span class="text-muted small"><%= groups.length %> مجموعة</span>
+    <% } %>
+    <% if (pagination.totalPages > 1) { %>
+      <span class="text-muted small">•</span>
+      <span class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></span>
+    <% } %>
+  </div>
+</form>
+
+<div class="card table-card ops-table-card mt-4">
+  <% if (transportRecords.length) { %>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 ops-table">
+      <thead>
+        <tr>
+          <th>المعتمر</th>
+          <th>الجواز</th>
+          <th>الرحلة</th>
+          <th>الحجز</th>
+          <th>المجموعة</th>
+          <th>الحالة</th>
+          <th>تحديث</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% transportRecords.forEach(({ reservation, member, trip }) => { %>
+          <tr>
+            <td class="fw-semibold"><%= member.name %></td>
+            <td class="text-muted small"><%= member.passport || '—' %></td>
+            <td>
+              <% if (trip?._id) { %><a href="/trips/<%= trip._id %>?tab=operations&ops=transport" class="ops-link"><%= trip.name %></a><% } else { %>—<% } %>
+            </td>
+            <td><a href="/reservations/<%= reservation._id %>" class="ops-link"><%= reservation.reservationNumber %></a></td>
+            <td><%= member.transportGroup || '—' %></td>
+            <td><%- include('../partials/badge', { status: member.transportStatus || 'pending' }) %></td>
+            <td class="ops-row-actions">
+              <form method="POST" action="/transport/<%= reservation._id %>/<%= member._id %>" class="ops-inline-form">
+                <input type="hidden" name="_method" value="PUT">
+                <input type="hidden" name="returnTo" value="/transport<%= buildQueryString(filters) %>">
+                <select name="transportStatus" class="form-select form-select-sm">
+                  <% transportStatuses.forEach(s => { %>
+                    <option value="<%= s %>" <%= member.transportStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+                  <% }) %>
+                </select>
+                <input name="transportGroup" class="form-control form-control-sm" placeholder="مجموعة" value="<%= member.transportGroup || '' %>" list="transportGroupsList">
+                <button class="btn btn-sm btn-primary" type="submit">حفظ</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <datalist id="transportGroupsList">
+    <% groups.forEach(g => { %><option value="<%= g %>"></option><% }) %>
+  </datalist>
+  <% if (pagination.totalPages > 1) { %>
+  <div class="card-footer ops-pagination">
+    <div class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></div>
+    <div class="d-flex gap-2">
+      <% if (pagination.hasPrev) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/transport<%= buildQueryString(filters, { page: pagination.page - 1 }) %>">السابق</a>
+      <% } %>
+      <% if (pagination.hasNext) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/transport<%= buildQueryString(filters, { page: pagination.page + 1 }) %>">التالي</a>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+  <% } else { %>
+    <div class="ops-empty">
+      <i class="fa-solid fa-bus"></i>
+      <p>لا توجد سجلات نقل مطابقة</p>
+      <% if (hasActiveFilters) { %><a href="/transport" class="btn btn-outline-primary btn-sm">مسح الفلاتر</a><% } %>
+    </div>
+  <% } %>
+</div>
+
+<script src="/js/operations-hub.js"></script>

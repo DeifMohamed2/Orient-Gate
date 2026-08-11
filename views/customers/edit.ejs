@@ -1,0 +1,13 @@
+<%- include('../partials/page-header', { pageTitle: 'تعديل العميل', pageSubtitle: customer.name }) %>
+<div class="card">
+  <div class="card-body">
+    <form method="POST" action="/customers/<%= customer._id %>">
+      <input type="hidden" name="_method" value="PUT">
+      <%- include('_customer-form', { customer }) %>
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i> حفظ التعديلات</button>
+        <a href="/customers/<%= customer._id %>" class="btn btn-outline-primary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>

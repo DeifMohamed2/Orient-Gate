@@ -1,0 +1,128 @@
+<% 
+  const p = typeof currentPath !== 'undefined' ? currentPath : '';
+  function isActive(prefix) { return p === prefix || (prefix !== '/' && p.startsWith(prefix)); }
+  const u = typeof user !== 'undefined' && user ? user : (typeof currentUser !== 'undefined' ? currentUser : null);
+  let initials = 'م';
+  if (u) {
+    const a = (u.name && u.name[0]) || (u.email && u.email[0]) || '?';
+    initials = a.toUpperCase();
+  }
+  function can(perm) {
+    if (!u || typeof u.hasPermission !== 'function') return false;
+    return u.hasPermission(perm);
+  }
+%>
+<aside class="sidebar" id="appSidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-mark" aria-hidden="true"><i class="fa-solid fa-plane"></i></div>
+    <div class="min-w-0">
+      <div class="sidebar-brand-title text-truncate"><%= appName %></div>
+      <div class="sidebar-brand-sub text-truncate">للسياحة والحج والعمرة</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <% if (can('dashboard:view')) { %>
+    <div class="nav-section">الرئيسية</div>
+    <a class="nav-link <%= isActive('/dashboard') && !isActive('/dashboard/search') ? 'active' : '' %>" href="/dashboard">
+      <i class="fa-solid fa-chart-pie nav-icon-fa"></i>
+      <span class="nav-label">لوحة التحكم</span>
+    </a>
+    <% } %>
+    <% if (can('trips:view') || can('reservations:view') || can('customers:view') || can('brokers:view') || can('finance:view')) { %>
+    <div class="nav-section">العمليات</div>
+    <% } %>
+    <% if (can('trips:view')) { %>
+    <a class="nav-link <%= isActive('/trips') ? 'active' : '' %>" href="/trips">
+      <i class="fa-solid fa-map-location-dot nav-icon-fa"></i>
+      <span class="nav-label">الرحلات</span>
+    </a>
+    <% } %>
+    <% if (can('reservations:view')) { %>
+    <a class="nav-link <%= isActive('/reservations') ? 'active' : '' %>" href="/reservations">
+      <i class="fa-solid fa-file-lines nav-icon-fa"></i>
+      <span class="nav-label">الحجوزات</span>
+    </a>
+    <% } %>
+    <% if (can('reservations:view') && can('customers:view')) { %>
+    <a class="nav-link <%= isActive('/sales') ? 'active' : '' %>" href="/sales">
+      <i class="fa-solid fa-user-tie nav-icon-fa"></i>
+      <span class="nav-label">المبيعات</span>
+    </a>
+    <% } %>
+    <% if (can('customers:view')) { %>
+    <a class="nav-link <%= isActive('/customers') ? 'active' : '' %>" href="/customers">
+      <i class="fa-solid fa-users nav-icon-fa"></i>
+      <span class="nav-label">العملاء</span>
+    </a>
+    <% } %>
+    <% if (can('brokers:view')) { %>
+    <a class="nav-link <%= isActive('/brokers') ? 'active' : '' %>" href="/brokers">
+      <i class="fa-solid fa-handshake nav-icon-fa"></i>
+      <span class="nav-label">السماسرة</span>
+    </a>
+    <% } %>
+    <% if (can('trips:view')) { %>
+    <a class="nav-link <%= isActive('/supervisors') ? 'active' : '' %>" href="/supervisors">
+      <i class="fa-solid fa-user-shield nav-icon-fa"></i>
+      <span class="nav-label">المشرفين</span>
+    </a>
+    <% } %>
+    <% if (can('finance:view')) { %>
+    <a class="nav-link <%= isActive('/finance') ? 'active' : '' %>" href="/finance">
+      <i class="fa-solid fa-wallet nav-icon-fa"></i>
+      <span class="nav-label">المالية</span>
+    </a>
+    <% } %>
+    <% if (can('finance:view')) { %>
+    <a class="nav-link <%= isActive('/suppliers') ? 'active' : '' %>" href="/suppliers">
+      <i class="fa-solid fa-truck nav-icon-fa"></i>
+      <span class="nav-label">الموردين</span>
+    </a>
+    <% } %>
+    <% if (can('reservations:view') && can('trips:view')) { %>
+    <div class="nav-section">الخدمات</div>
+    <a class="nav-link <%= isActive('/visa') ? 'active' : '' %>" href="/visa">
+      <i class="fa-solid fa-passport nav-icon-fa"></i>
+      <span class="nav-label">التأشيرات</span>
+    </a>
+    <a class="nav-link <%= isActive('/transport') ? 'active' : '' %>" href="/transport">
+      <i class="fa-solid fa-bus nav-icon-fa"></i>
+      <span class="nav-label">النقل</span>
+    </a>
+    <a class="nav-link <%= isActive('/arrival-notices') ? 'active' : '' %>" href="/arrival-notices">
+      <i class="fa-solid fa-plane-arrival nav-icon-fa"></i>
+      <span class="nav-label">إشعارات الوصول</span>
+    </a>
+    <% } %>
+    <% if (can('reports:view')) { %>
+    <a class="nav-link <%= isActive('/reports') ? 'active' : '' %>" href="/reports">
+      <i class="fa-solid fa-chart-bar nav-icon-fa"></i>
+      <span class="nav-label">التقارير</span>
+    </a>
+    <% } %>
+    <% if (can('dashboard:view')) { %>
+    <div class="nav-section">أدوات</div>
+    <a class="nav-link <%= isActive('/dashboard/search') ? 'active' : '' %>" href="/dashboard/search">
+      <i class="fa-solid fa-magnifying-glass nav-icon-fa"></i>
+      <span class="nav-label">البحث والفلاتر</span>
+    </a>
+    <% } %>
+    <% if (can('users:manage')) { %>
+    <a class="nav-link <%= isActive('/users') ? 'active' : '' %>" href="/users">
+      <i class="fa-solid fa-user-gear nav-icon-fa"></i>
+      <span class="nav-label">المستخدمين</span>
+    </a>
+    <% } %>
+  </nav>
+  <% if (u) { %>
+  <div class="sidebar-user">
+    <div class="sidebar-user-card">
+      <div class="sidebar-user-avatar"><%= initials %></div>
+      <div class="sidebar-user-meta">
+        <div class="sidebar-user-name text-truncate"><%= u.name %></div>
+        <div class="sidebar-user-email text-truncate"><%= u.email %></div>
+      </div>
+    </div>
+  </div>
+  <% } %>
+</aside>

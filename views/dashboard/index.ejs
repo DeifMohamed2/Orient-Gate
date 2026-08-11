@@ -1,0 +1,516 @@
+<div class="dash-hub-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">لوحة التحكم</h1>
+    <p class="dash-hub-sub">نظرة شاملة على العمليات والأداء المالي</p>
+  </div>
+  <div class="page-actions">
+    <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('reservations:create')) { %>
+    <a href="/reservations/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> حجز جديد</a>
+    <% } %>
+    <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('trips:create')) { %>
+    <a href="/trips/new" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-plane me-1"></i> رحلة جديدة</a>
+    <% } %>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> طباعة</button>
+  </div>
+</div>
+
+<form class="card dash-hub-filters" method="GET" id="dashboardFilterForm">
+  <div class="dash-hub-filters-inner">
+    <div class="dash-hub-filter-search">
+      <i class="fa-solid fa-magnifying-glass dash-hub-filter-icon" aria-hidden="true"></i>
+      <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث بالعميل، رقم الحجز، أو الفاتورة...">
+    </div>
+    <div class="dash-hub-filter-field">
+      <select name="tripId" class="form-select">
+        <option value="">كل الرحلات</option>
+        <% trips.forEach(t => { %>
+          <option value="<%= t._id %>" <%= filters.tripId && String(filters.tripId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="dash-hub-filter-field">
+      <select name="paymentStatus" class="form-select">
+        <option value="">كل المدفوعات</option>
+        <% ['unpaid','partial','paid','refunded'].forEach(s => { %>
+          <option value="<%= s %>" <%= filters.paymentStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="dash-hub-filter-field">
+      <select name="tripStatus" class="form-select">
+        <option value="">كل حالات الرحلة</option>
+        <% ['active','completed','cancelled'].forEach(s => { %>
+          <option value="<%= s %>" <%= filters.tripStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="dash-hub-filter-field dash-hub-filter-date">
+      <input type="date" name="fromDate" id="dashFromDate" class="form-control" value="<%= filters.fromDate || '' %>" title="من تاريخ">
+    </div>
+    <div class="dash-hub-filter-field dash-hub-filter-date">
+      <input type="date" name="toDate" id="dashToDate" class="form-control" value="<%= filters.toDate || '' %>" title="إلى تاريخ">
+    </div>
+    <div class="dash-hub-date-presets">
+      <button type="button" class="btn btn-outline-primary btn-sm dash-date-preset" data-preset="this-month">هذا الشهر</button>
+      <button type="button" class="btn btn-outline-primary btn-sm dash-date-preset" data-preset="last-month">الشهر الماضي</button>
+      <button type="button" class="btn btn-outline-primary btn-sm dash-date-preset" data-preset="clear">الكل</button>
+    </div>
+    <div class="dash-hub-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> تطبيق</button>
+      <% if (hasActiveFilters) { %>
+        <a href="/dashboard" class="btn btn-outline-primary">مسح</a>
+      <% } %>
+    </div>
+  </div>
+</form>
+
+<div class="kpi-grid kpi-grid-8 kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">الرحلات النشطة</div>
+      <div class="kpi-value"><%= kpis.activeTrips %></div>
+      <div class="kpi-hint"><%= kpis.upcomingTrips %> قادمة</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-calendar-day"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">حجوزات اليوم</div>
+      <div class="kpi-value"><%= kpis.todayReservations %></div>
+      <div class="kpi-hint"><%= kpis.monthReservations %> هذا الشهر<% if (kpis.reservationTrend !== 0) { %> <span class="dash-kpi-trend <%= kpis.reservationTrend > 0 ? 'dash-kpi-trend--up' : 'dash-kpi-trend--down' %>"><%= kpis.reservationTrend > 0 ? '+' : '' %><%= kpis.reservationTrend %></span><% } %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المعتمرين</div>
+      <div class="kpi-value"><%= kpis.totalPassengers %></div>
+      <div class="kpi-hint">نشط</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">الإيرادات</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(kpis.totalRevenue) %></div>
+      <div class="kpi-hint">محصل <%= formatCurrency(kpis.collectedRevenue) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">غير محصل</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(kpis.outstanding) %></div>
+      <div class="kpi-hint"><%= kpis.unpaidInvoices %> فاتورة</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-chart-line"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">صافي الربح</div>
+      <div class="kpi-value kpi-value-sm <%= kpis.netProfit < 0 ? 'text-danger' : '' %>"><%= formatCurrency(kpis.netProfit) %></div>
+      <div class="kpi-hint">بعد المصروفات</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-bed"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إشغال الأسرة</div>
+      <div class="kpi-value"><%= kpis.occupancyPercent %>%</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-chair"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إشغال المقاعد</div>
+      <div class="kpi-value"><%= kpis.seatFillPercent %>%</div>
+    </div>
+  </div>
+</div>
+
+<% if (seatAlerts.length || departureAlerts.length) { %>
+<div class="dash-alert-strip mb-4">
+  <% seatAlerts.forEach(({ trip, seatStats }) => { %>
+    <div class="dash-alert-item dash-alert-item--warning">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span><strong><%= trip.name %></strong> — <% if (seatStats.isOverbooked) { %>مقاعد مكتملة<% } else { %><%= seatStats.remaining %> مقعد متبقي<% } %></span>
+      <a href="/trips/<%= trip._id %>" class="btn btn-sm btn-outline-primary">عرض</a>
+    </div>
+  <% }) %>
+  <% departureAlerts.forEach(({ trip, daysUntil }) => { %>
+    <div class="dash-alert-item dash-alert-item--info">
+      <i class="fa-solid fa-plane-departure"></i>
+      <span><strong><%= trip.name %></strong> — <%= daysUntil === 0 ? 'المغادرة اليوم' : `المغادرة بعد ${daysUntil} يوم` %></span>
+      <a href="/trips/<%= trip._id %>" class="btn btn-sm btn-outline-primary">عرض</a>
+    </div>
+  <% }) %>
+</div>
+<% } %>
+
+<section class="dash-trips-hero mb-4">
+  <div class="dash-section-head">
+    <div>
+      <h2 class="dash-section-title"><i class="fa-solid fa-plane-departure me-2"></i>الرحلات المفتوحة</h2>
+      <p class="dash-section-sub">اختر رحلة للتفاصيل — اسحب للتصفح <span class="trip-rail-count"><%= openTripCards.length %> رحلة</span></p>
+    </div>
+    <div class="dash-section-actions">
+      <a href="/trips" class="btn btn-outline-primary btn-sm">عرض كل الرحلات</a>
+    </div>
+  </div>
+  <div class="trip-rail-wrap trip-rail-wrap--hero">
+    <div class="trip-rail-fade trip-rail-fade--start" aria-hidden="true"></div>
+    <button type="button" class="trip-rail-nav trip-rail-nav--prev" aria-label="السابق"><i class="fa-solid fa-chevron-right"></i></button>
+    <div class="trip-rail" id="tripRail">
+      <% if (openTripCards.length) { %>
+        <% openTripCards.forEach(({ trip, hotelCount, profitability, seatStats }) => { %>
+          <%- include('../partials/trip-card', { trip, hotelCount, profitability, seatStats, formatDate, formatCurrency, showBookButton: true }) %>
+        <% }) %>
+      <% } else { %>
+        <div class="trip-rail-empty">
+          <i class="fa-solid fa-plane-slash"></i>
+          <p>لا توجد رحلات مفتوحة حالياً</p>
+          <a href="/trips/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> إنشاء رحلة</a>
+        </div>
+      <% } %>
+    </div>
+    <button type="button" class="trip-rail-nav trip-rail-nav--next" aria-label="التالي"><i class="fa-solid fa-chevron-left"></i></button>
+    <div class="trip-rail-fade trip-rail-fade--end" aria-hidden="true"></div>
+    <div class="trip-rail-progress"><div class="trip-rail-progress-bar"></div></div>
+  </div>
+</section>
+
+<div class="dash-analytics-grid mb-4">
+  <div class="row g-3 mb-3">
+    <div class="col-lg-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>المبيعات الشهرية</span>
+          <span class="text-muted small">آخر 12 شهر</span>
+        </div>
+        <div class="card-body"><div id="salesChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">الإيرادات مقابل المصروفات</div>
+        <div class="card-body"><div id="revenueExpenseChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">معدل التحصيل</div>
+        <div class="card-body"><div id="collectionRateChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">طرق الدفع</div>
+        <div class="card-body"><div id="paymentMethodChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">حالة الحجوزات</div>
+        <div class="card-body"><div id="reservationStatusChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">صافي ربح الرحلات</div>
+        <div class="card-body"><div id="tripProfitChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">الحجوزات الأسبوعية</div>
+        <div class="card-body"><div id="weeklyBookingsChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">إشغال المقاعد (رحلات مفتوحة)</div>
+        <div class="card-body"><div id="capacityChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card chart-card dash-chart-card">
+        <div class="card-header">أعمار المستحقات</div>
+        <div class="card-body"><div id="outstandingAgingChart" class="chart-mount"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-activity-grid mb-4">
+  <div class="row g-3">
+    <!-- Payments -->
+    <div class="col-lg-6">
+      <div class="card dash-activity-section" data-panel="payments">
+        <div class="dash-activity-header">
+          <div class="dash-activity-title-wrap">
+            <i class="fa-solid fa-money-bill-wave dash-activity-icon"></i>
+            <div>
+              <h3 class="dash-activity-title">آخر المدفوعات</h3>
+              <p class="dash-activity-meta"><%= paymentSummary.count %> دفعة • <%= formatCurrency(paymentSummary.recentTotal) %> معروض</p>
+            </div>
+          </div>
+          <a href="/finance?tab=payments" class="btn btn-sm btn-outline-primary">عرض الكل <i class="fa-solid fa-arrow-left ms-1"></i></a>
+        </div>
+        <div class="dash-activity-toolbar">
+          <div class="dash-activity-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" class="form-control form-control-sm dash-panel-search" placeholder="بحث بالطريقة أو المبلغ..." data-filter-panel="payments">
+          </div>
+        </div>
+        <div class="dash-activity-body">
+          <ul class="dash-activity-list">
+            <% recentPayments.forEach(p => { %>
+              <li class="dash-activity-item" data-search="<%= paymentMethodLabel(p.method) %> <%= p.amount %> <%= formatDate(p.paymentDate) %>">
+                <div class="dash-activity-item-main">
+                  <span class="dash-activity-item-label"><%= paymentMethodLabel(p.method) %></span>
+                  <span class="dash-activity-item-sub"><%= formatDate(p.paymentDate) %></span>
+                </div>
+                <span class="dash-activity-item-value text-success"><%= formatCurrency(p.amount) %></span>
+              </li>
+            <% }) %>
+            <% if (!recentPayments.length) { %>
+              <li class="dash-activity-empty">لا توجد مدفوعات</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reservations -->
+    <div class="col-lg-6">
+      <div class="card dash-activity-section" data-panel="reservations">
+        <div class="dash-activity-header">
+          <div class="dash-activity-title-wrap">
+            <i class="fa-solid fa-calendar-check dash-activity-icon"></i>
+            <div>
+              <h3 class="dash-activity-title">آخر الحجوزات</h3>
+              <p class="dash-activity-meta"><%= reservationSummary.unpaid %> غير مدفوع • <%= reservationSummary.partial %> جزئي • <%= reservationSummary.paid %> مدفوع</p>
+            </div>
+          </div>
+          <a href="/reservations" class="btn btn-sm btn-outline-primary">عرض الكل <i class="fa-solid fa-arrow-left ms-1"></i></a>
+        </div>
+        <div class="dash-activity-toolbar">
+          <div class="dash-activity-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" class="form-control form-control-sm dash-panel-search" placeholder="بحث بالعميل أو الرحلة..." data-filter-panel="reservations">
+          </div>
+        </div>
+        <div class="dash-activity-body">
+          <ul class="dash-activity-list">
+            <% recentReservations.forEach(r => { %>
+              <li class="dash-activity-item" data-search="<%= r.primaryCustomerName %> <%= r.tripId?.name || '' %> <%= r.reservationNumber %>">
+                <div class="dash-activity-item-main">
+                  <a href="/reservations/<%= r._id %>" class="dash-activity-item-label dash-link"><%= r.primaryCustomerName %></a>
+                  <span class="dash-activity-item-sub"><%= r.tripId?.name || '—' %> • <%= r.reservationNumber %></span>
+                </div>
+                <%- include('../partials/badge', { status: r.paymentStatus }) %>
+              </li>
+            <% }) %>
+            <% if (!recentReservations.length) { %>
+              <li class="dash-activity-empty">لا توجد حجوزات</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upcoming trips -->
+    <div class="col-lg-6">
+      <div class="card dash-activity-section" data-panel="departures">
+        <div class="dash-activity-header">
+          <div class="dash-activity-title-wrap">
+            <i class="fa-solid fa-plane-departure dash-activity-icon"></i>
+            <div>
+              <h3 class="dash-activity-title">أقرب الرحلات</h3>
+              <p class="dash-activity-meta"><%= upcomingDepartures.length %> رحلة خلال 14 يوم</p>
+            </div>
+          </div>
+          <a href="/trips" class="btn btn-sm btn-outline-primary">عرض الكل <i class="fa-solid fa-arrow-left ms-1"></i></a>
+        </div>
+        <div class="dash-activity-toolbar">
+          <div class="dash-activity-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" class="form-control form-control-sm dash-panel-search" placeholder="بحث باسم الرحلة..." data-filter-panel="departures">
+          </div>
+        </div>
+        <div class="dash-activity-body">
+          <ul class="dash-activity-list">
+            <% upcomingDepartures.forEach(t => { %>
+              <li class="dash-activity-item" data-search="<%= t.name %> <%= formatDate(t.startDate) %>">
+                <div class="dash-activity-item-main">
+                  <a href="/trips/<%= t._id %>" class="dash-activity-item-label dash-link"><%= t.name %></a>
+                  <span class="dash-activity-item-sub"><i class="fa-regular fa-calendar me-1"></i><%= formatDate(t.startDate) %></span>
+                </div>
+                <span class="dash-activity-chip"><%= departureLabel(t.startDate) %></span>
+              </li>
+            <% }) %>
+            <% if (!upcomingDepartures.length) { %>
+              <li class="dash-activity-empty">لا توجد رحلات قادمة</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top trips -->
+    <div class="col-lg-6">
+      <div class="card dash-activity-section" data-panel="top-trips">
+        <div class="dash-activity-header">
+          <div class="dash-activity-title-wrap">
+            <i class="fa-solid fa-trophy dash-activity-icon"></i>
+            <div>
+              <h3 class="dash-activity-title">أعلى الرحلات</h3>
+              <p class="dash-activity-meta">حسب المحصل</p>
+            </div>
+          </div>
+          <a href="/finance" class="btn btn-sm btn-outline-primary">عرض الكل <i class="fa-solid fa-arrow-left ms-1"></i></a>
+        </div>
+        <div class="dash-activity-toolbar">
+          <div class="dash-activity-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" class="form-control form-control-sm dash-panel-search" placeholder="بحث باسم الرحلة..." data-filter-panel="top-trips">
+          </div>
+        </div>
+        <div class="dash-activity-body">
+          <ul class="dash-activity-list">
+            <% topTrips.forEach(({ trip, profitability }, i) => { %>
+              <li class="dash-activity-item" data-search="<%= trip.name %>">
+                <div class="dash-activity-item-main">
+                  <a href="/trips/<%= trip._id %>?tab=finance" class="dash-activity-item-label dash-link">
+                    <span class="dash-activity-rank"><%= i + 1 %></span> <%= trip.name %>
+                  </a>
+                  <span class="dash-activity-item-sub"><%= profitability.reservationCount || 0 %> حجز</span>
+                </div>
+                <span class="dash-activity-item-value text-primary"><%= formatCurrency(profitability.collectedRevenue) %></span>
+              </li>
+            <% }) %>
+            <% if (!topTrips.length) { %>
+              <li class="dash-activity-empty">لا توجد بيانات</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending invoices -->
+    <div class="col-lg-6">
+      <div class="card dash-activity-section" data-panel="invoices">
+        <div class="dash-activity-header">
+          <div class="dash-activity-title-wrap">
+            <i class="fa-solid fa-file-invoice-dollar dash-activity-icon"></i>
+            <div>
+              <h3 class="dash-activity-title">فواتير معلقة</h3>
+              <p class="dash-activity-meta"><%= invoiceSummary.count %> فاتورة • <%= formatCurrency(invoiceSummary.totalOutstanding) %> مستحق</p>
+            </div>
+          </div>
+          <a href="/finance?tab=outstanding" class="btn btn-sm btn-outline-primary">عرض الكل <i class="fa-solid fa-arrow-left ms-1"></i></a>
+        </div>
+        <div class="dash-activity-toolbar">
+          <div class="dash-activity-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" class="form-control form-control-sm dash-panel-search" placeholder="بحث بالعميل أو رقم الفاتورة..." data-filter-panel="invoices">
+          </div>
+        </div>
+        <div class="dash-activity-body">
+          <ul class="dash-activity-list">
+            <% pendingInvoices.forEach(inv => { %>
+              <li class="dash-activity-item" data-search="<%= inv.customerName %> <%= inv.invoiceNumber %> <%= inv.tripId?.name || '' %>">
+                <div class="dash-activity-item-main">
+                  <span class="dash-activity-item-label"><%= inv.customerName || '—' %></span>
+                  <span class="dash-activity-item-sub"><%= inv.invoiceNumber %> • <%= inv.tripId?.name || '—' %></span>
+                </div>
+                <div class="dash-activity-item-end">
+                  <span class="dash-activity-item-value text-danger"><%= formatCurrency(inv.balance) %></span>
+                  <%- include('../partials/badge', { status: inv.status }) %>
+                </div>
+              </li>
+            <% }) %>
+            <% if (!pendingInvoices.length) { %>
+              <li class="dash-activity-empty">لا توجد فواتير معلقة</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open trips overview -->
+    <div class="col-lg-6">
+      <div class="card dash-activity-section" data-panel="open-trips">
+        <div class="dash-activity-header">
+          <div class="dash-activity-title-wrap">
+            <i class="fa-solid fa-map-location-dot dash-activity-icon"></i>
+            <div>
+              <h3 class="dash-activity-title">الرحلات المفتوحة</h3>
+              <p class="dash-activity-meta"><%= openTripsList.length %> رحلة نشطة</p>
+            </div>
+          </div>
+          <a href="/trips" class="btn btn-sm btn-outline-primary">عرض الكل <i class="fa-solid fa-arrow-left ms-1"></i></a>
+        </div>
+        <div class="dash-activity-toolbar">
+          <div class="dash-activity-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="search" class="form-control form-control-sm dash-panel-search" placeholder="بحث باسم الرحلة..." data-filter-panel="open-trips">
+          </div>
+        </div>
+        <div class="dash-activity-body">
+          <ul class="dash-activity-list">
+            <% openTripsList.forEach(({ trip, seatStats, profitability }) => { %>
+              <li class="dash-activity-item" data-search="<%= trip.name %>">
+                <div class="dash-activity-item-main">
+                  <a href="/trips/<%= trip._id %>" class="dash-activity-item-label dash-link"><%= trip.name %></a>
+                  <span class="dash-activity-item-sub">
+                    <%= seatStats.reserved %>/<%= seatStats.total %> مقعد • <%= profitability.reservationCount || 0 %> حجز
+                  </span>
+                </div>
+                <div class="dash-activity-item-end">
+                  <span class="dash-activity-item-value"><%= formatCurrency(profitability.collectedRevenue) %></span>
+                  <div class="trip-progress <%= seatUrgencyClass(seatStats) %>" style="width:60px;height:4px;margin-top:4px;">
+                    <div class="trip-progress-bar" style="width:<%= Math.min(seatStats.percentSold, 100) %>%"></div>
+                  </div>
+                </div>
+              </li>
+            <% }) %>
+            <% if (!openTripsList.length) { %>
+              <li class="dash-activity-empty">لا توجد رحلات مفتوحة</li>
+            <% } %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick links -->
+<div class="dash-quick-links mb-4">
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('reservations:create')) { %>
+  <a href="/reservations/new" class="dash-quick-link"><i class="fa-solid fa-plus"></i><span>حجز جديد</span></a>
+  <% } %>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('trips:create')) { %>
+  <a href="/trips/new" class="dash-quick-link"><i class="fa-solid fa-plane"></i><span>رحلة جديدة</span></a>
+  <% } %>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('finance:view')) { %>
+  <a href="/finance" class="dash-quick-link"><i class="fa-solid fa-wallet"></i><span>المركز المالي</span></a>
+  <% } %>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('customers:view')) { %>
+  <a href="/customers" class="dash-quick-link"><i class="fa-solid fa-users"></i><span>العملاء</span></a>
+  <% } %>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('reports:view')) { %>
+  <a href="/reports" class="dash-quick-link"><i class="fa-solid fa-chart-pie"></i><span>التقارير</span></a>
+  <% } %>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('dashboard:view')) { %>
+  <a href="/dashboard/search" class="dash-quick-link"><i class="fa-solid fa-magnifying-glass"></i><span>بحث متقدم</span></a>
+  <% } %>
+</div>
+
+<div id="dashboardChartData" hidden aria-hidden="true"><%= JSON.stringify(chartData).replace(/</g, '\\u003c') %></div>
+<script src="/js/dashboard-hub.js"></script>

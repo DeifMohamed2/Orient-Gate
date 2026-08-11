@@ -1,0 +1,33 @@
+<div class="trip-hub-header">
+  <nav class="trip-hub-breadcrumb" aria-label="breadcrumb">
+    <a href="/trips"><i class="fa-solid fa-plane me-1"></i> الرحلات</a>
+    <span class="trip-hub-breadcrumb-sep">/</span>
+    <span><%= trip.name %></span>
+  </nav>
+  <div class="trip-hub-header-main">
+    <div class="trip-hub-title-wrap">
+      <h1 class="trip-hub-title"><%= trip.name %></h1>
+      <%- include('../partials/badge', { status: trip.status }) %>
+      <span class="trip-hub-departure"><i class="fa-regular fa-clock me-1"></i><%= departureLabel(trip.startDate) %></span>
+    </div>
+    <p class="trip-hub-sub">
+      <i class="fa-regular fa-calendar me-1"></i><%= formatDate(trip.startDate) %> — <%= formatDate(trip.endDate) %>
+      <% if (trip.airline) { %> • <i class="fa-solid fa-plane-up me-1"></i><%= trip.airline %><% } %>
+      <% if (trip.country) { %> • <%= trip.country %><% } %>
+    </p>
+  </div>
+  <div class="trip-hub-actions">
+    <a href="/arrival-notices/trip/<%= trip._id %>" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-plane-arrival me-1"></i> إشعار الوصول</a>
+    <a href="/reservations/new?tripId=<%= trip._id %>" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> حجز جديد</a>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission && currentUser.hasPermission('trips:edit')) { %>
+    <a href="/trips/<%= trip._id %>/edit" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-pen me-1"></i> تعديل</a>
+  <% } %>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> طباعة</button>
+  <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission && currentUser.hasPermission('trips:delete')) { %>
+    <form action="/trips/<%= trip._id %>" method="POST" class="d-inline" onsubmit="return confirm('حذف الرحلة؟')">
+      <input type="hidden" name="_method" value="DELETE">
+      <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-trash me-1"></i> حذف</button>
+    </form>
+  <% } %>
+  </div>
+</div>

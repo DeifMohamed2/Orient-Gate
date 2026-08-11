@@ -1,0 +1,126 @@
+<%- include('../partials/page-header', {
+  pageTitle: profile.broker.name,
+  pageSubtitle: profile.broker.company || 'سمسار',
+  pageActionsHtml: '<a href="/brokers/' + profile.broker._id + '/edit" class="btn btn-outline-primary btn-sm">تعديل</a><a href="/brokers" class="btn btn-outline-secondary btn-sm ms-1">رجوع</a>'
+}) %>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-file-lines"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">الحجوزات</div>
+      <div class="kpi-value"><%= profile.stats.reservationCount %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">عملاء فريدين</div>
+      <div class="kpi-value"><%= profile.stats.uniqueClients %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-rotate"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">عملاء متكررين</div>
+      <div class="kpi-value"><%= profile.stats.repeatClients %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إجمالي الإيرادات</div>
+      <div class="kpi-value"><%= formatCurrency(profile.stats.totalRevenue) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-wallet"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المحصل</div>
+      <div class="kpi-value"><%= formatCurrency(profile.stats.totalPaid) %></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">معلومات السمسار</div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0">
+          <li class="mb-2"><strong>الاسم:</strong> <%= profile.broker.name %></li>
+          <li class="mb-2"><strong>الشركة:</strong> <%= profile.broker.company || '—' %></li>
+          <li class="mb-2"><strong>الهواتف:</strong> <%= (profile.broker.phones || []).join(' — ') || '—' %></li>
+          <li class="mb-2"><strong>البريد:</strong> <%= profile.broker.email || '—' %></li>
+          <% if (profile.broker.notes) { %>
+            <li class="mb-2"><strong>ملاحظات:</strong> <%= profile.broker.notes %></li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+  <% if (profile.tripsBreakdown.length) { %>
+    <div class="card mb-4">
+      <div class="card-header">الحجوزات حسب الرحلة</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>الرحلة</th>
+              <th>التاريخ</th>
+              <th>حجوزات</th>
+              <th>معتمرين</th>
+              <th>الإيرادات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% profile.tripsBreakdown.forEach(t => { %>
+              <tr>
+                <td><%= t.trip?.name || '—' %></td>
+                <td><%= t.trip?.startDate ? formatDate(t.trip.startDate) : '—' %></td>
+                <td><%= t.reservationCount %></td>
+                <td><%= t.memberCount %></td>
+                <td><%= formatCurrency(t.revenue) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+
+    <div class="card">
+      <div class="card-header">آخر الحجوزات</div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>رقم الحجز</th>
+              <th>الرحلة</th>
+              <th>التاريخ</th>
+              <th>المعتمرين</th>
+              <th>الإجمالي</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!profile.reservations.length) { %>
+              <tr><td colspan="6" class="text-center text-muted py-3">لا توجد حجوزات</td></tr>
+            <% } %>
+            <% profile.reservations.forEach(r => { %>
+              <tr>
+                <td><a href="/reservations/<%= r._id %>"><%= r.reservationNumber %></a></td>
+                <td><%= r.tripId?.name || '—' %></td>
+                <td><%= formatDate(r.bookingDate) %></td>
+                <td><%= (r.members || []).length %></td>
+                <td><%= formatCurrency(r.pricingSnapshot?.total) %></td>
+                <td><%= statusLabel(r.status) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

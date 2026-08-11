@@ -1,0 +1,193 @@
+<div class="customers-hub-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">العملاء</h1>
+    <p class="customers-hub-sub">إدارة بيانات العملاء والمعتمرين</p>
+  </div>
+  <div class="page-actions customers-hub-actions">
+    <div class="dropdown">
+      <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fa-solid fa-file-export me-1"></i> تصدير Excel
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <a class="dropdown-item customers-export-link" href="/customers/export<%= buildQueryString(filters) %>" data-export-scope="filtered">
+            تصدير النتائج الحالية
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item customers-export-link" href="/customers/export?scope=all" data-export-scope="all">
+            تصدير الكل
+          </a>
+        </li>
+      </ul>
+    </div>
+    <a href="/customers/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> عميل جديد</a>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إجمالي العملاء</div>
+      <div class="kpi-value"><%= stats.total %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-star"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">VIP</div>
+      <div class="kpi-value"><%= stats.vip %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-ban"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">قائمة سوداء</div>
+      <div class="kpi-value"><%= stats.blacklisted %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-calendar-check"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">لديهم حجوزات</div>
+      <div class="kpi-value"><%= stats.withReservations %></div>
+    </div>
+  </div>
+</div>
+
+<form class="card customers-filters" method="GET" id="customersFilterForm">
+  <div class="customers-filters-inner">
+    <div class="customers-filter-search">
+      <i class="fa-solid fa-magnifying-glass customers-filter-icon" aria-hidden="true"></i>
+      <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث بالاسم، الجواز، الهاتف، أو البريد...">
+    </div>
+    <div class="customers-filter-field">
+      <select name="vip" class="form-select">
+        <option value="">كل العملاء</option>
+        <option value="true" <%= filters.vip === 'true' ? 'selected' : '' %>>VIP فقط</option>
+      </select>
+    </div>
+    <div class="customers-filter-field">
+      <select name="blacklisted" class="form-select">
+        <option value="">الكل</option>
+        <option value="true" <%= filters.blacklisted === 'true' ? 'selected' : '' %>>قائمة سوداء</option>
+      </select>
+    </div>
+    <div class="customers-filter-field">
+      <select name="gender" class="form-select">
+        <option value="">كل الأجناس</option>
+        <option value="male" <%= filters.gender === 'male' ? 'selected' : '' %>>ذكر</option>
+        <option value="female" <%= filters.gender === 'female' ? 'selected' : '' %>>أنثى</option>
+      </select>
+    </div>
+    <div class="customers-filter-field">
+      <input type="text" name="nationality" class="form-control" value="<%= filters.nationality || '' %>" placeholder="الجنسية">
+    </div>
+    <div class="customers-filter-field">
+      <select name="hasReservations" class="form-select">
+        <option value="">كل العملاء</option>
+        <option value="true" <%= filters.hasReservations === 'true' ? 'selected' : '' %>>لديهم حجوزات</option>
+      </select>
+    </div>
+    <div class="customers-filter-field">
+      <select name="sort" class="form-select">
+        <option value="newest" <%= filters.sort === 'newest' ? 'selected' : '' %>>الأحدث</option>
+        <option value="name" <%= filters.sort === 'name' ? 'selected' : '' %>>الاسم</option>
+        <option value="loyalty" <%= filters.sort === 'loyalty' ? 'selected' : '' %>>نقاط الولاء</option>
+      </select>
+    </div>
+    <div class="customers-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> تطبيق</button>
+      <% if (hasActiveFilters) { %>
+        <a href="/customers" class="btn btn-outline-primary">مسح</a>
+      <% } %>
+    </div>
+  </div>
+  <div class="customers-stats">
+    <span class="trip-rail-count"><%= pagination.totalCount %> نتيجة</span>
+    <% if (pagination.totalPages > 1) { %>
+      <span class="text-muted small">•</span>
+      <span class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></span>
+    <% } %>
+  </div>
+</form>
+
+<div class="card table-card customers-table-card mt-4">
+  <% if (customers.length) { %>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 customers-table">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>الجواز</th>
+          <th>الهاتف</th>
+          <th>البريد</th>
+          <th>الجنسية</th>
+          <th>الجنس</th>
+          <th>الحجوزات</th>
+          <th>آخر رحلة</th>
+          <th>التسجيل</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% customers.forEach(c => { %>
+          <tr class="customers-table-row" data-href="/customers/<%= c._id %>">
+            <td>
+              <a href="/customers/<%= c._id %>" class="customers-link fw-semibold"><%= c.name %></a>
+              <div class="customers-badges">
+                <% if (c.isVip) { %><span class="badge-status badge-warning">VIP</span><% } %>
+                <% if (c.isBlacklisted) { %><span class="badge-status badge-danger">محظور</span><% } %>
+              </div>
+            </td>
+            <td>
+              <%= c.passport || '—' %>
+              <% if (c.passportExpiringSoon) { %>
+                <i class="fa-solid fa-triangle-exclamation text-warning ms-1" title="جواز قارب على الانتهاء"></i>
+              <% } %>
+            </td>
+            <td class="text-muted"><%= (c.phones && c.phones[0]) || '—' %></td>
+            <td class="text-muted small"><%= c.email || '—' %></td>
+            <td><%= c.nationality || '—' %></td>
+            <td><%= genderLabel(c.gender) %></td>
+            <td><span class="badge bg-light text-dark"><%= c.reservationCount || 0 %></span></td>
+            <td class="text-muted small"><%= c.lastTripName || '—' %></td>
+            <td class="text-muted small"><%= formatDate(c.createdAt) %></td>
+            <td class="customers-row-actions">
+              <a href="/customers/<%= c._id %>" class="btn btn-icon" title="عرض"><i class="fa-solid fa-eye"></i></a>
+              <a href="/customers/<%= c._id %>/edit" class="btn btn-icon" title="تعديل"><i class="fa-solid fa-pen"></i></a>
+              <a href="/reservations/new?customerId=<%= c._id %>" class="btn btn-icon" title="حجز جديد"><i class="fa-solid fa-calendar-plus"></i></a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% if (pagination.totalPages > 1) { %>
+  <div class="card-footer customers-pagination">
+    <div class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></div>
+    <div class="d-flex gap-2">
+      <% if (pagination.hasPrev) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/customers<%= buildQueryString(filters, { page: pagination.page - 1 }) %>">السابق</a>
+      <% } %>
+      <% if (pagination.hasNext) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/customers<%= buildQueryString(filters, { page: pagination.page + 1 }) %>">التالي</a>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+  <% } else { %>
+    <div class="customers-empty">
+      <i class="fa-solid fa-users"></i>
+      <p>لا يوجد عملاء مطابقون للبحث</p>
+      <% if (hasActiveFilters) { %>
+        <a href="/customers" class="btn btn-outline-primary btn-sm">مسح الفلاتر</a>
+      <% } else { %>
+        <a href="/customers/new" class="btn btn-primary btn-sm">إضافة عميل جديد</a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<script src="/js/customers.js"></script>

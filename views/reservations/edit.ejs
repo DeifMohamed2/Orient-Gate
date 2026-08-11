@@ -1,0 +1,9 @@
+<%- include('../partials/page-header', { pageTitle: 'تعديل الحجز ' + reservation.reservationNumber, pageActionsHtml: '<a href="/reservations/' + reservation._id + '" class="btn btn-outline-primary btn-sm">رجوع</a>' }) %>
+<div class="card"><div class="card-body">
+  <form method="POST" action="/reservations/<%= reservation._id %>">
+    <input type="hidden" name="_method" value="PUT">
+    <div class="mb-3"><label class="form-label">مسؤول الحجز</label><input class="form-control" name="bookingOfficer" value="<%= reservation.bookingOfficer || '' %>"></div>
+    <div class="mb-3"><label class="form-label">ملاحظات</label><textarea class="form-control" name="notes" rows="4"><%= reservation.notes || '' %></textarea></div>
+    <button class="btn btn-primary" type="submit">حفظ</button>
+  </form>
+</div></div>

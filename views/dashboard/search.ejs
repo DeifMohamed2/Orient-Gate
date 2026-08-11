@@ -1,0 +1,53 @@
+<%- include('../partials/page-header', {
+  pageTitle: 'البحث والفلاتر',
+  pageSubtitle: 'بحث متقدم في الحجوزات والعمليات'
+}) %>
+
+<form class="card filters-toolbar" method="GET" action="/dashboard/search">
+  <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث بالاسم، الهاتف، رقم الحجز">
+  <select name="tripId" class="form-select">
+    <option value="">كل الرحلات</option>
+    <% trips.forEach(t => { %>
+      <option value="<%= t._id %>" <%= filters.tripId == t._id ? 'selected' : '' %>><%= t.name %></option>
+    <% }) %>
+  </select>
+  <select name="paymentStatus" class="form-select">
+    <option value="">كل حالات الدفع</option>
+    <% ['unpaid','partial','paid','refunded'].forEach(s => { %>
+      <option value="<%= s %>" <%= filters.paymentStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+    <% }) %>
+  </select>
+  <select name="status" class="form-select">
+    <option value="">كل الحالات</option>
+    <% ['active','cancelled','completed'].forEach(s => { %>
+      <option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+    <% }) %>
+  </select>
+  <input type="date" name="fromDate" class="form-control" value="<%= filters.fromDate || '' %>">
+  <input type="date" name="toDate" class="form-control" value="<%= filters.toDate || '' %>">
+  <button class="btn btn-primary" type="submit">تطبيق</button>
+</form>
+
+<div class="card table-card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>رقم الحجز</th><th>العميل</th><th>الرحلة</th><th>التاريخ</th><th>الإجمالي</th><th>الدفع</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% reservations.forEach(r => { %>
+          <tr>
+            <td><%= r.reservationNumber %></td>
+            <td><%= r.primaryCustomerName %></td>
+            <td><%= r.tripId?.name %></td>
+            <td><%= formatDate(r.bookingDate) %></td>
+            <td><%= formatCurrency(r.pricingSnapshot?.total) %></td>
+            <td><%- include('../partials/badge', { status: r.paymentStatus }) %></td>
+            <td><a href="/reservations/<%= r._id %>" class="btn btn-outline-primary btn-sm">عرض</a></td>
+          </tr>
+        <% }) %>
+        <% if (!reservations.length) { %><tr><td colspan="7" class="text-center text-muted py-4">لا توجد نتائج</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</div>

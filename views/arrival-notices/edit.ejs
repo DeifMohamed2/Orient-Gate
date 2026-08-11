@@ -1,0 +1,296 @@
+<% 
+  const n = notice;
+  const trip = n.tripId || {};
+  const ts = typeof tripSource !== 'undefined' ? tripSource : null;
+  const dateVal = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+  const movements = n.movements && n.movements.length ? n.movements : [{ description: '', from: '', to: '', time: '', date: null }];
+  const hasMakkah = ts ? ts.itinerary.hasMakkah : true;
+  const hasMedina = ts ? ts.itinerary.hasMedina : true;
+  const medinaHotelMissing = ts && ts.itinerary.cityHasMedina && !ts.hotels.medina;
+  const makkahHotelMissing = ts && ts.itinerary.cityHasMecca && !ts.hotels.mecca;
+  const hint = (path) => {
+    if (!ts) return '';
+    const parts = path.split('.');
+    let v = ts;
+    parts.forEach((p) => { v = v?.[p]; });
+    return v?.value != null ? String(v.value) : '';
+  };
+  const errClass = (field) => (typeof errors !== 'undefined' && errors && errors[field]) ? ' is-invalid' : '';
+%>
+<div class="arrival-edit-header mb-4">
+  <div>
+    <h1 class="page-title page-title--compact">إشعار الوصول رقم ( <%= n.noticeNumber %> )</h1>
+    <p class="text-muted mb-0">
+      الرحلة: <a href="/trips/<%= trip._id %>?tab=arrival"><%= trip.name %></a>
+      • اسم الوكيل: <strong><%= settings.agentName %></strong>
+      <a href="/settings/agency" class="small ms-1">(تعديل)</a>
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <% if (n.status === 'issued') { %>
+      <span class="badge bg-success align-self-center py-2 px-3">صادر — <%= formatDate(n.issuedAt) %></span>
+    <% } else { %>
+      <span class="badge bg-secondary align-self-center py-2 px-3">مسودة</span>
+    <% } %>
+    <a href="/arrival-notices/<%= n._id %>/print" class="btn btn-outline-primary btn-sm" target="_blank"><i class="fa-solid fa-print me-1"></i> معاينة / طباعة</a>
+    <a href="/arrival-notices" class="btn btn-outline-secondary btn-sm">القائمة</a>
+  </div>
+</div>
+
+<% if (typeof tripDataChanged !== 'undefined' && tripDataChanged) { %>
+<div class="alert alert-warning arrival-trip-changed-banner">
+  <i class="fa-solid fa-triangle-exclamation me-2"></i>
+  بيانات الرحلة تغيرت — اضغط <strong>تحديث من الرحلة</strong> لسحب أحدث البيانات.
+</div>
+<% } %>
+
+<% if (typeof completeness !== 'undefined' && completeness) { %>
+<div class="arrival-completeness-banner arrival-completeness-banner--<%= completeness.complete ? 'ok' : (completeness.missingCount > 2 ? 'bad' : 'warn') %> mb-4">
+  <div class="arrival-completeness-title">
+    <% if (completeness.complete) { %>
+      <i class="fa-solid fa-circle-check me-1"></i> البيانات مكتملة
+    <% } else { %>
+      <i class="fa-solid fa-circle-exclamation me-1"></i>
+      <%= completeness.missingCount %> عنصر ناقص
+    <% } %>
+  </div>
+  <% if (!completeness.complete) { %>
+    <ul class="arrival-completeness-list mb-0">
+      <% Object.entries(completeness.errors || {}).forEach(([field, msg]) => { %>
+        <li><%= msg %></li>
+      <% }) %>
+      <% (completeness.missingFromTrip || []).forEach((m) => { %>
+        <li><a href="<%= m.link %>"><%= m.reason %></a></li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
+<% } %>
+
+<form method="POST" action="/arrival-notices/<%= n._id %>" id="arrivalNoticeForm" novalidate
+  data-has-makkah="<%= hasMakkah ? '1' : '0' %>"
+  data-has-medina="<%= hasMedina ? '1' : '0' %>">
+  <input type="hidden" name="_method" value="PUT">
+
+  <div class="card arrival-section mb-4">
+    <div class="card-header"><i class="fa-solid fa-plane-arrival me-2"></i> بيانات الرحلة — الوصول والمغادرة</div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-bordered arrival-flight-table mb-0">
+          <thead>
+            <tr>
+              <th></th>
+              <th>منفذ</th>
+              <th>وسيلة النقل</th>
+              <th>رقم الرحلة</th>
+              <th>التاريخ</th>
+              <th>التوقيت</th>
+              <th>الخطوط</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th class="arrival-row-label">الوصول</th>
+              <td>
+                <input class="form-control form-control-sm<%= errClass('arrivalPort') %>" name="arrivalPort" value="<%= n.arrivalPort || '' %>" placeholder="<%= hint('defaults.arrivalPort') %>" required>
+                <%- include('_field-error', { field: 'arrivalPort' }) %>
+              </td>
+              <td>
+                <input class="form-control form-control-sm" name="arrivalTransportMode" value="<%= n.arrivalTransportMode || '' %>" placeholder="<%= hint('defaults.transportMode') %>">
+              </td>
+              <td>
+                <input class="form-control form-control-sm<%= errClass('arrivalFlightNumber') %>" name="arrivalFlightNumber" value="<%= n.arrivalFlightNumber || '' %>" placeholder="<%= hint('flights.arrivalFlightNumber') %>" required>
+                <%- include('_field-error', { field: 'arrivalFlightNumber' }) %>
+              </td>
+              <td>
+                <input type="date" class="form-control form-control-sm<%= errClass('arrivalDate') %>" name="arrivalDate" value="<%= dateVal(n.arrivalDate) %>" required>
+                <%- include('_field-error', { field: 'arrivalDate' }) %>
+              </td>
+              <td>
+                <input class="form-control form-control-sm" name="arrivalTime" value="<%= n.arrivalTime || '' %>" placeholder="<%= hint('flights.arrivalTime') || '7:55' %>">
+              </td>
+              <td>
+                <input class="form-control form-control-sm<%= errClass('arrivalAirline') %>" name="arrivalAirline" value="<%= n.arrivalAirline || '' %>" placeholder="<%= hint('flights.arrivalAirline') %>" required>
+                <%- include('_field-error', { field: 'arrivalAirline' }) %>
+              </td>
+            </tr>
+            <tr>
+              <th class="arrival-row-label">المغادرة</th>
+              <td>
+                <input class="form-control form-control-sm<%= errClass('departurePort') %>" name="departurePort" value="<%= n.departurePort || '' %>" placeholder="<%= hint('defaults.departurePort') %>" required>
+                <%- include('_field-error', { field: 'departurePort' }) %>
+              </td>
+              <td>
+                <input class="form-control form-control-sm" name="departureTransportMode" value="<%= n.departureTransportMode || '' %>" placeholder="<%= hint('defaults.transportMode') %>">
+              </td>
+              <td>
+                <input class="form-control form-control-sm<%= errClass('departureFlightNumber') %>" name="departureFlightNumber" value="<%= n.departureFlightNumber || '' %>" placeholder="<%= hint('flights.departureFlightNumber') %>" required>
+                <%- include('_field-error', { field: 'departureFlightNumber' }) %>
+              </td>
+              <td>
+                <input type="date" class="form-control form-control-sm<%= errClass('departureDate') %>" name="departureDate" value="<%= dateVal(n.departureDate) %>" required>
+                <%- include('_field-error', { field: 'departureDate' }) %>
+              </td>
+              <td>
+                <input class="form-control form-control-sm" name="departureTime" value="<%= n.departureTime || '' %>" placeholder="<%= hint('flights.departureTime') || '00:30' %>">
+              </td>
+              <td>
+                <input class="form-control form-control-sm<%= errClass('departureAirline') %>" name="departureAirline" value="<%= n.departureAirline || '' %>" placeholder="<%= hint('flights.departureAirline') %>" required>
+                <%- include('_field-error', { field: 'departureAirline' }) %>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card arrival-section mb-4">
+    <div class="card-header"><i class="fa-solid fa-hotel me-2"></i> بيانات السكن</div>
+    <div class="card-body">
+      <div class="row g-4">
+        <% if (hasMakkah && ts?.itineraryType !== 'medina_only') { %>
+        <div class="col-md-<%= hasMedina ? '6' : '12' %>">
+          <h6 class="arrival-city-title">مكة المكرمة
+            <%- include('_field-badge', { field: 'makkahHotelName' }) %>
+          </h6>
+          <% if (makkahHotelMissing) { %>
+            <div class="arrival-missing-hotel alert alert-warning py-2 small">
+              لا يوجد فندق بمكة في هذه الرحلة —
+              <a href="/trips/<%= trip._id %>?tab=accommodation">إضافة فندق</a>
+            </div>
+          <% } %>
+          <div class="mb-2">
+            <label class="form-label">اسم الفندق</label>
+            <input class="form-control<%= errClass('makkahHotelName') %>" name="makkahHotelName" value="<%= n.makkahHotelName || '' %>" placeholder="<%= hint('accommodation.makkah.name') %>" <%= hasMakkah ? 'required' : '' %>>
+            <%- include('_field-error', { field: 'makkahHotelName' }) %>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label">تاريخ الدخول</label>
+              <input type="date" class="form-control<%= errClass('makkahCheckIn') %>" name="makkahCheckIn" value="<%= dateVal(n.makkahCheckIn) %>" <%= hasMakkah ? 'required' : '' %>>
+              <%- include('_field-error', { field: 'makkahCheckIn' }) %>
+            </div>
+            <div class="col-6">
+              <label class="form-label">تاريخ الخروج</label>
+              <input type="date" class="form-control<%= errClass('makkahCheckOut') %>" name="makkahCheckOut" value="<%= dateVal(n.makkahCheckOut) %>" <%= hasMakkah ? 'required' : '' %>>
+              <%- include('_field-error', { field: 'makkahCheckOut' }) %>
+            </div>
+          </div>
+        </div>
+        <% } %>
+
+        <% if (hasMedina) { %>
+        <div class="col-md-<%= hasMakkah && ts?.itineraryType !== 'medina_only' ? '6' : '12' %>">
+          <h6 class="arrival-city-title">المدينة المنورة
+            <%- include('_field-badge', { field: 'medinaHotelName' }) %>
+          </h6>
+          <% if (medinaHotelMissing) { %>
+            <div class="arrival-missing-hotel alert alert-warning py-2 small">
+              لا يوجد فندق بالمدينة في هذه الرحلة —
+              <a href="/trips/<%= trip._id %>?tab=accommodation">إضافة فندق</a>
+            </div>
+          <% } %>
+          <div class="mb-2">
+            <label class="form-label">اسم الفندق</label>
+            <input class="form-control<%= errClass('medinaHotelName') %>" name="medinaHotelName" value="<%= n.medinaHotelName || '' %>" placeholder="<%= hint('accommodation.medina.name') %>" <%= hasMedina && !medinaHotelMissing ? 'required' : '' %>>
+            <%- include('_field-error', { field: 'medinaHotelName' }) %>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label">تاريخ الدخول</label>
+              <input type="date" class="form-control<%= errClass('medinaCheckIn') %>" name="medinaCheckIn" value="<%= dateVal(n.medinaCheckIn) %>" <%= hasMedina && !medinaHotelMissing ? 'required' : '' %>>
+              <%- include('_field-error', { field: 'medinaCheckIn' }) %>
+            </div>
+            <div class="col-6">
+              <label class="form-label">تاريخ الخروج</label>
+              <input type="date" class="form-control<%= errClass('medinaCheckOut') %>" name="medinaCheckOut" value="<%= dateVal(n.medinaCheckOut) %>" <%= hasMedina && !medinaHotelMissing ? 'required' : '' %>>
+              <%- include('_field-error', { field: 'medinaCheckOut' }) %>
+            </div>
+          </div>
+        </div>
+        <% } else if (ts && ts.itineraryType === 'makkah_only') { %>
+        <div class="col-12">
+          <p class="text-muted small mb-0"><i class="fa-solid fa-info-circle me-1"></i> هذه الرحلة لا تشمل إقامة بالمدينة — تم إخفاء قسم المدينة.</p>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="card arrival-section mb-4">
+    <div class="card-header"><i class="fa-solid fa-users me-2"></i> ملخص المجموعة</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">أرقام المجموعات <%- include('_field-badge', { field: 'groupNumbers' }) %></label>
+          <input class="form-control" name="groupNumbers" value="<%= n.groupNumbers || '' %>" placeholder="<%= hint('statsMeta.groupNumbers') || '1 — 2 — 3' %>">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">عدد المعتمرين <%- include('_field-badge', { field: 'pilgrimCount' }) %></label>
+          <input type="number" class="form-control<%= errClass('pilgrimCount') %>" name="pilgrimCount" min="1" value="<%= n.pilgrimCount || 0 %>" required>
+          <%- include('_field-error', { field: 'pilgrimCount' }) %>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">عدد الباصات <%- include('_field-badge', { field: 'busCount' }) %></label>
+          <input type="number" class="form-control" name="busCount" min="0" value="<%= n.busCount || 0 %>">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card arrival-section mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="fa-solid fa-bus me-2"></i> بيانات النقل</span>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="addMovementRow"><i class="fa-solid fa-plus me-1"></i> إضافة صف</button>
+    </div>
+    <div class="card-body p-0">
+      <% if (typeof errors !== 'undefined' && errors && errors.movements) { %>
+        <div class="alert alert-danger m-3 mb-0 py-2 small"><%= errors.movements %></div>
+      <% } %>
+      <div class="table-responsive">
+        <table class="table table-bordered mb-0" id="movementsTable">
+          <thead>
+            <tr>
+              <th style="width:40px">م</th>
+              <th>بيانات</th>
+              <th>من</th>
+              <th>إلى</th>
+              <th>التوقيت</th>
+              <th>التاريخ</th>
+              <th style="width:50px"></th>
+            </tr>
+          </thead>
+          <tbody id="movementsBody">
+            <%- include('_movement-rows', { movements }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card arrival-section mb-4">
+    <div class="card-body">
+      <label class="form-label">ملاحظات</label>
+      <textarea class="form-control" name="notes" rows="2"><%= n.notes || '' %></textarea>
+    </div>
+  </div>
+
+  <div class="arrival-form-actions d-flex gap-2 flex-wrap align-items-center">
+    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-1"></i> حفظ</button>
+    <a href="/arrival-notices/<%= n._id %>/print?print=1" class="btn btn-outline-secondary" target="_blank"><i class="fa-solid fa-print me-1"></i> طباعة</a>
+  </div>
+</form>
+
+<div class="arrival-secondary-actions d-flex gap-2 flex-wrap mt-2">
+  <form method="POST" action="/arrival-notices/<%= n._id %>/refresh" class="d-inline" onsubmit="return confirm('سيتم استبدال البيانات بما هو متصل بالرحلة. متابعة؟')">
+    <button type="submit" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-rotate me-1"></i> تحديث من الرحلة</button>
+  </form>
+  <% if (n.status !== 'issued') { %>
+  <form method="POST" action="/arrival-notices/<%= n._id %>/issue" class="d-inline">
+    <button type="submit" class="btn btn-success btn-sm"><i class="fa-solid fa-stamp me-1"></i> إصدار</button>
+  </form>
+  <% } %>
+</div>
+
+<script src="/js/arrival-notice.js"></script>

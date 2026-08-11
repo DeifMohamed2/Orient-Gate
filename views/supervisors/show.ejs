@@ -1,0 +1,155 @@
+<%- include('../partials/page-header', {
+  pageTitle: profile.supervisor.name,
+  pageSubtitle: 'مشرف رحلة',
+  pageActionsHtml: '<a href="/supervisors/' + profile.supervisor._id + '/edit" class="btn btn-outline-primary btn-sm">تعديل</a><a href="/supervisors" class="btn btn-outline-secondary btn-sm ms-1">رجوع</a>'
+}) %>
+
+<div class="supervisor-profile-hero card mb-4">
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-start gap-4">
+      <div class="supervisor-profile-avatar">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <h2 class="supervisor-profile-name mb-0"><%= profile.supervisor.name %></h2>
+          <% if (profile.supervisor.isActive) { %>
+            <span class="badge bg-success-subtle text-success">نشط</span>
+          <% } else { %>
+            <span class="badge bg-secondary-subtle text-secondary">غير نشط</span>
+          <% } %>
+        </div>
+        <div class="supervisor-profile-meta text-muted small mb-3">
+          <% if (profile.supervisor.phoneEg) { %>
+            <span class="me-3"><i class="fa-solid fa-phone me-1"></i>مصر: <%= profile.supervisor.phoneEg %></span>
+          <% } %>
+          <% if (profile.supervisor.phoneSa) { %>
+            <span class="me-3"><i class="fa-solid fa-phone me-1"></i>السعودية: <%= profile.supervisor.phoneSa %></span>
+          <% } %>
+          <% if (profile.supervisor.email) { %>
+            <span class="me-3"><i class="fa-solid fa-envelope me-1"></i><%= profile.supervisor.email %></span>
+          <% } %>
+        </div>
+        <div class="d-flex flex-wrap gap-3">
+          <div class="supervisor-profile-chip">
+            <span class="label">رسوم الرحلة الافتراضية</span>
+            <strong><%= formatCurrency(profile.supervisor.defaultTripFee) %></strong>
+          </div>
+          <% if (profile.supervisor.nationalId) { %>
+          <div class="supervisor-profile-chip">
+            <span class="label">الرقم القومي</span>
+            <strong><%= profile.supervisor.nationalId %></strong>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إجمالي الرحلات</div>
+      <div class="kpi-value"><%= profile.stats.totalTrips %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-user-check"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">كم مشرف</div>
+      <div class="kpi-value"><%= profile.stats.tripsAsMain %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-user-plus"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">كم مساعد</div>
+      <div class="kpi-value"><%= profile.stats.tripsAsAssistant %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المعتمرين المرافقين</div>
+      <div class="kpi-value"><%= profile.stats.totalPilgrims %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-calendar-day"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">رحلات قادمة</div>
+      <div class="kpi-value"><%= profile.stats.upcomingTrips %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إجمالي الرسوم</div>
+      <div class="kpi-value"><%= formatCurrency(profile.stats.totalFees) %></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header">معلومات إضافية</div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0">
+          <li class="mb-2"><strong>تاريخ الإضافة:</strong> <%= formatDate(profile.supervisor.createdAt) %></li>
+          <li class="mb-2"><strong>رحلات مكتملة:</strong> <%= profile.stats.completedTrips %></li>
+          <% if (profile.supervisor.notes) { %>
+            <li class="mb-2"><strong>ملاحظات:</strong><br><%= profile.supervisor.notes %></li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">سجل الرحلات</div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th>الرحلة</th>
+              <th>التاريخ</th>
+              <th>الدور</th>
+              <th>المعتمرين</th>
+              <th>الرسوم</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!profile.tripHistory.length) { %>
+              <tr><td colspan="6" class="text-center text-muted py-4">لا توجد رحلات مرتبطة</td></tr>
+            <% } %>
+            <% profile.tripHistory.forEach(row => { %>
+              <tr>
+                <td>
+                  <a href="/trips/<%= row.trip._id %>"><%= row.trip.name %></a>
+                </td>
+                <td>
+                  <%= row.trip.startDate ? formatDate(row.trip.startDate) : '—' %>
+                  <% if (row.trip.endDate) { %> — <%= formatDate(row.trip.endDate) %><% } %>
+                </td>
+                <td>
+                  <% if (row.role === 'main') { %>
+                    <span class="badge bg-primary-subtle text-primary"><%= row.roleLabel %></span>
+                  <% } else { %>
+                    <span class="badge bg-info-subtle text-info"><%= row.roleLabel %></span>
+                  <% } %>
+                </td>
+                <td><%= row.pilgrimCount %></td>
+                <td><%= formatCurrency(row.fee) %></td>
+                <td><%= statusLabel(row.trip.status) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

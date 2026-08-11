@@ -1,0 +1,23 @@
+<%- include('../partials/page-header', {
+  pageTitle: 'إنشاء رحلة جديدة',
+  pageSubtitle: 'بناء رحلة كاملة: تفاصيل، مقاعد، فنادق، غرف، وتسعير مرن',
+  pageActionsHtml: '<a href="/trips" class="btn btn-outline-primary btn-sm">رجوع</a>'
+}) %>
+
+<%- include('./_form', {
+  trip: trip || {},
+  formHotels: typeof formHotels !== 'undefined' ? formHotels : undefined,
+  vipCatalog: typeof vipCatalog !== 'undefined' ? vipCatalog : [],
+  isEdit: false,
+  formActionUrl: '/trips',
+  HOTEL_STARS,
+  ROOM_TYPES,
+  CITIES,
+  cityLabel,
+  roomTypeLabel,
+  statusLabel,
+  supervisors: typeof supervisors !== 'undefined' ? supervisors : [],
+  defaultCosts: typeof defaultCosts !== 'undefined' ? defaultCosts : {},
+  restoreFormDraft: typeof restoreFormDraft !== 'undefined' ? restoreFormDraft : false,
+  resolveFlightLegs,
+}) %>

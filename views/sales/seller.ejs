@@ -1,0 +1,112 @@
+<% const s = profile.seller; const stats = profile.stats; %>
+
+<div class="ops-hub-header">
+  <div class="ops-profile-header-main">
+    <a href="/sales" class="btn btn-icon ops-profile-back" title="رجوع"><i class="fa-solid fa-arrow-right"></i></a>
+    <div>
+      <h1 class="page-title page-title--compact"><%= s.name %></h1>
+      <p class="ops-hub-sub"><%= roleLabel(s.role) %> — <%= s.email %></p>
+    </div>
+  </div>
+  <div class="page-actions ops-hub-actions">
+    <a href="/sales/export?salesEmployeeId=<%= s._id %>" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-file-export me-1"></i> تصدير</a>
+    <a href="/reservations/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> حجز جديد</a>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-file-lines"></i></div>
+    <div class="kpi-body"><div class="kpi-label">الحجوزات</div><div class="kpi-value"><%= stats.bookingCount %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="kpi-body"><div class="kpi-label">العملاء</div><div class="kpi-value"><%= stats.clientCount %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+    <div class="kpi-body"><div class="kpi-label">إجمالي المبيعات</div><div class="kpi-value kpi-value-sm"><%= formatCurrency(stats.totalRevenue) %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+    <div class="kpi-body"><div class="kpi-label">المتبقي</div><div class="kpi-value kpi-value-sm"><%= formatCurrency(stats.outstanding) %></div></div>
+  </div>
+</div>
+
+<form class="card ops-filters mb-4" method="GET">
+  <div class="ops-filters-inner">
+    <div class="ops-filter-field">
+      <input type="date" name="fromDate" class="form-control" value="<%= profile.filters.fromDate || '' %>">
+    </div>
+    <div class="ops-filter-field">
+      <input type="date" name="toDate" class="form-control" value="<%= profile.filters.toDate || '' %>">
+    </div>
+    <div class="ops-filter-field">
+      <select name="status" class="form-select">
+        <option value="active" <%= profile.filters.status === 'active' ? 'selected' : '' %>>نشط</option>
+        <option value="all" <%= profile.filters.status === 'all' ? 'selected' : '' %>>الكل</option>
+      </select>
+    </div>
+    <div class="ops-filter-actions">
+      <button class="btn btn-primary btn-sm" type="submit">تطبيق</button>
+    </div>
+  </div>
+</form>
+
+<div class="card table-card ops-table-card">
+  <div class="card-header">حجوزات <%= s.name %> (<%= pagination.totalCount %>)</div>
+  <% if (profile.bookings.length) { %>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 ops-table">
+      <thead>
+        <tr>
+          <th>رقم الحجز</th>
+          <th>التاريخ</th>
+          <th>العميل</th>
+          <th>الرحلة</th>
+          <th>معتمرين</th>
+          <th>الإجمالي</th>
+          <th>المحصل</th>
+          <th>المتبقي</th>
+          <th>الدفع</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% profile.bookings.forEach(r => { %>
+          <% const total = r.pricingSnapshot?.total || 0; const paid = r.pricingSnapshot?.paid || 0; const balance = Math.max(0, total - paid); %>
+          <tr>
+            <td><a href="/reservations/<%= r._id %>" class="ops-link fw-semibold"><%= r.reservationNumber %></a></td>
+            <td class="text-muted small"><%= formatDate(r.bookingDate) %></td>
+            <td><%= r.primaryCustomerName %></td>
+            <td class="small"><%= r.tripId?.name || '—' %></td>
+            <td><%= r.members?.length || 0 %></td>
+            <td class="fw-semibold"><%= formatCurrency(total) %></td>
+            <td><%= formatCurrency(paid) %></td>
+            <td class="<%= balance > 0 ? 'text-danger fw-semibold' : '' %>"><%= formatCurrency(balance) %></td>
+            <td><%- include('../partials/badge', { status: r.paymentStatus }) %></td>
+            <td><a href="/reservations/<%= r._id %>" class="btn btn-icon"><i class="fa-solid fa-eye"></i></a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% if (pagination.totalPages > 1) { %>
+  <div class="card-footer ops-pagination">
+    <div class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></div>
+    <div class="d-flex gap-2">
+      <% if (pagination.hasPrev) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/sales/seller/<%= s._id %><%= buildQueryString(profile.filters, { page: pagination.page - 1 }) %>">السابق</a>
+      <% } %>
+      <% if (pagination.hasNext) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/sales/seller/<%= s._id %><%= buildQueryString(profile.filters, { page: pagination.page + 1 }) %>">التالي</a>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+  <% } else { %>
+    <div class="ops-empty py-5"><p>لا توجد حجوزات لهذا البائع</p></div>
+  <% } %>
+</div>
+
+<script src="/js/sales-hub.js"></script>

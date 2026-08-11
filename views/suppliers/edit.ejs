@@ -1,0 +1,16 @@
+<%- include('../partials/page-header', { pageTitle: 'تعديل المورد' }) %>
+<div class="card"><div class="card-body">
+  <form method="POST" action="/suppliers/<%= supplier._id %>">
+    <input type="hidden" name="_method" value="PUT">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">الاسم</label><input class="form-control" name="name" value="<%= supplier.name %>" required></div>
+      <div class="col-md-6"><label class="form-label">الفئة</label><select name="category" class="form-select">
+        <% ['hotel','flight','visa','transport','guide','insurance','other'].forEach(c => { %><option value="<%= c %>" <%= supplier.category === c ? 'selected' : '' %>><%= c %></option><% }) %>
+      </select></div>
+      <div class="col-md-4"><label class="form-label">مسؤول التواصل</label><input class="form-control" name="contactName" value="<%= supplier.contactName || '' %>"></div>
+      <div class="col-md-4"><label class="form-label">الهاتف</label><input class="form-control" name="phone" value="<%= supplier.phone || '' %>"></div>
+      <div class="col-md-4"><label class="form-label"><input type="checkbox" name="isActive" value="true" <%= supplier.isActive ? 'checked' : '' %>> نشط</label></div>
+    </div>
+    <button class="btn btn-primary mt-3" type="submit">حفظ</button>
+  </form>
+</div></div>

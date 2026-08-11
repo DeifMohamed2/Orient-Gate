@@ -1,0 +1,10 @@
+<% if (contextBar && contextBar.length) { %>
+<div class="trip-hub-context-bar" role="region" aria-label="ملخص سريع">
+  <% contextBar.forEach((item) => { %>
+    <div class="trip-hub-context-item<%= item.warn ? ' trip-hub-context-item--warn' : '' %><%= item.muted ? ' trip-hub-context-item--muted' : '' %>">
+      <span class="trip-hub-context-label"><%= item.label %></span>
+      <strong class="trip-hub-context-value"><%= item.display %></strong>
+    </div>
+  <% }) %>
+</div>
+<% } %>

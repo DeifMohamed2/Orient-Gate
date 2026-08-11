@@ -1,0 +1,24 @@
+<%- include('_hub-header') %>
+<% if (activeTab !== 'overview') { %><%- include('_hub-context-bar') %><% } %>
+<%- include('_hub-tabs') %>
+
+<div class="trip-hub-workspace">
+  <% if (activeTab === 'overview') { %>
+    <%- include('tabs/_overview') %>
+  <% } else if (activeTab === 'reservations') { %>
+    <%- include('tabs/_reservations') %>
+  <% } else if (activeTab === 'accommodation') { %>
+    <%- include('tabs/_accommodation') %>
+  <% } else if (activeTab === 'finance') { %>
+    <%- include('tabs/_finance') %>
+  <% } else if (activeTab === 'operations') { %>
+    <%- include('tabs/_operations') %>
+  <% } else if (activeTab === 'arrival') { %>
+    <%- include('tabs/_arrival') %>
+  <% } %>
+</div>
+
+<% if (activeTab === 'overview') { %>
+<div id="tripHubChartData" hidden aria-hidden="true"><%= JSON.stringify(chartData).replace(/</g, '\\u003c') %></div>
+<% } %>
+<script src="/js/trip-hub.js"></script>

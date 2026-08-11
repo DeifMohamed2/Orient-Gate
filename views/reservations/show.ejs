@@ -1,0 +1,281 @@
+<% const p = displayPricing; const trip = reservation.tripId; const u = typeof currentUser !== 'undefined' ? currentUser : null; %>
+
+<div class="reservation-show-header">
+  <div class="reservation-show-header-main">
+    <a href="/reservations" class="btn btn-icon reservation-show-back" title="رجوع"><i class="fa-solid fa-arrow-right"></i></a>
+    <div>
+      <h1 class="reservation-show-title"><%= reservation.reservationNumber %></h1>
+      <p class="reservation-show-sub"><%= reservation.primaryCustomerName %> — <%= trip?.name || '' %></p>
+    </div>
+    <%- include('../partials/badge', { status: reservation.status }) %>
+    <%- include('../partials/badge', { status: reservation.paymentStatus }) %>
+  </div>
+  <div class="reservation-show-actions">
+    <% if (u && u.hasPermission('reservations:create')) { %>
+    <a href="/reservations/new?tripId=<%= trip?._id %>" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> حجز جديد</a>
+    <% } %>
+    <% if (trip?._id && u && u.hasPermission('accommodation:manage')) { %>
+      <a href="/trips/<%= trip._id %>?tab=accommodation" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-bed me-1"></i> تسكين</a>
+    <% } %>
+    <% if (trip?._id && u && u.hasPermission('finance:view')) { %>
+      <a href="/trips/<%= trip._id %>?tab=finance" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-wallet me-1"></i> مالية الرحلة</a>
+    <% } %>
+    <% if (reservation.status === 'active' && u && u.hasPermission('reservations:edit')) { %>
+      <a href="/reservations/<%= reservation._id %>/edit" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-pen me-1"></i> تعديل</a>
+    <% } %>
+    <% if (reservation.status === 'active' && u && u.hasPermission('reservations:cancel')) { %>
+      <form method="POST" action="/reservations/<%= reservation._id %>/cancel" class="d-inline" onsubmit="return confirm('هل أنت متأكد من إلغاء هذا الحجز؟')">
+        <button class="btn btn-outline-danger btn-sm" type="submit"><i class="fa-solid fa-ban me-1"></i> إلغاء</button>
+      </form>
+    <% } %>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> طباعة</button>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-receipt"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">الإجمالي</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(p.total) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المدفوع</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(p.paid) %></div>
+      <% if (p.paidExceedsTotal) { %><div class="kpi-hint text-danger">يتجاوز الإجمالي</div><% } %>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المتبقي</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(p.balance) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المعتمرين</div>
+      <div class="kpi-value"><%= reservation.members?.length || 0 %></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card reservation-detail-card">
+      <div class="card-header"><i class="fa-solid fa-user me-2 text-primary"></i>بيانات العميل</div>
+      <div class="card-body">
+        <ul class="detail-list">
+          <li><span><i class="fa-solid fa-user me-1"></i> الاسم</span><strong>
+            <% if (reservation.primaryCustomerId) { %>
+              <% if (u && u.hasPermission('customers:view')) { %>
+              <a href="/customers/<%= reservation.primaryCustomerId %>" class="dash-link"><%= reservation.primaryCustomerName %></a>
+              <% } else { %>
+              <%= reservation.primaryCustomerName %>
+              <% } %>
+            <% } else { %>
+              <%= reservation.primaryCustomerName %>
+            <% } %>
+          </strong></li>
+          <li><span><i class="fa-solid fa-phone me-1"></i> الهاتف</span><strong><%= reservation.primaryPhone %></strong></li>
+          <li><span><i class="fa-regular fa-calendar me-1"></i> تاريخ الحجز</span><strong><%= formatDate(reservation.bookingDate) %></strong></li>
+          <li><span><i class="fa-solid fa-people-group me-1"></i> نوع المجموعة</span><strong><%= statusLabel(reservation.groupType) %></strong></li>
+          <% if (reservation.brokerId) { %>
+            <li><span><i class="fa-solid fa-handshake me-1"></i> السمسار</span><strong>
+              <% if (u && u.hasPermission('brokers:view')) { %>
+              <a href="/brokers/<%= reservation.brokerId._id || reservation.brokerId %>"><%= reservation.brokerId.name || '—' %></a>
+              <% } else { %>
+              <%= reservation.brokerId.name || '—' %>
+              <% } %>
+            </strong></li>
+          <% } %>
+          <% if (reservation.packageStars || reservation.pricingSnapshot?.packageStars) { %>
+            <li><span><i class="fa-solid fa-layer-group me-1"></i> باقة الإقامة</span><strong><%= packageStarsLabel(reservation.packageStars || reservation.pricingSnapshot.packageStars) %></strong></li>
+          <% } %>
+          <% if (reservation.salesEmployee?.name) { %>
+            <li><span><i class="fa-solid fa-user-tie me-1"></i> مسئول المبيعات</span><strong>
+              <% if (reservation.salesEmployee._id) { %>
+                <a href="/sales/seller/<%= reservation.salesEmployee._id %>" class="dash-link"><%= reservation.salesEmployee.name %></a>
+              <% } else { %>
+                <%= reservation.salesEmployee.name %>
+              <% } %>
+            </strong></li>
+          <% } %>
+          <% if (reservation.bookingOfficer) { %>
+            <li><span><i class="fa-solid fa-id-badge me-1"></i> مسئول الحجز</span><strong><%= reservation.bookingOfficer %></strong></li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card reservation-detail-card">
+      <div class="card-header"><i class="fa-solid fa-concierge-bell me-2 text-primary"></i>الخدمات لكل معتمر</div>
+      <div class="card-body">
+        <% reservation.members.forEach((m, i) => { %>
+          <div class="member-services-show<%= i > 0 ? ' mt-3 pt-3 border-top' : '' %>">
+            <div class="fw-semibold small mb-2"><%= m.name || 'معتمر ' + (i + 1) %></div>
+            <div class="service-status-grid">
+              <% Object.entries(m.serviceToggles || {}).forEach(([k, v]) => { %>
+                <span class="service-status-chip <%= v ? 'service-status-chip--included' : 'service-status-chip--excluded' %>">
+                  <i class="fa-solid <%= v ? 'fa-circle-check' : 'fa-circle-xmark' %>"></i>
+                  <%= serviceLabel(k) %>
+                </span>
+              <% }) %>
+            </div>
+          </div>
+        <% }) %>
+        <% if (reservation.pricingSnapshot?.serviceDeductions?.length) { %>
+        <div class="mt-3 pt-3 border-top">
+          <div class="text-muted small mb-2">خصومات الخدمات</div>
+          <% reservation.pricingSnapshot.serviceDeductions.forEach((d) => { %>
+            <div class="small text-muted">− <%= d.label %>: <%= formatCurrency(d.amount) %></div>
+          <% }) %>
+        </div>
+        <% } %>
+        <% if (reservation.selectedVipItems?.length) { %>
+        <div class="mt-3 pt-3 border-top">
+          <div class="text-muted small mb-2">خدمات VIP المضافة</div>
+          <div class="vip-assignment-summary" style="border:none;background:transparent;padding:0;">
+            <ul class="vip-assignment-summary__list">
+              <% reservation.selectedVipItems.forEach((item) => { %>
+                <li class="vip-assignment-summary__item">
+                  <span class="vip-assignment-summary__item-label">
+                    <i class="fa-solid fa-gem text-warning"></i>
+                    <span><%= item.name %></span>
+                    <% if (item.scope === 'room_group') { %>
+                      <span class="vip-assignment-summary__scope vip-assignment-summary__scope--room">للغرفة (<%= item.memberName || '' %>)</span>
+                    <% } else { %>
+                      <span class="vip-assignment-summary__scope vip-assignment-summary__scope--member"><%= item.memberName || 'شخصي' %></span>
+                    <% } %>
+                  </span>
+                  <span class="fw-semibold"><%= formatCurrency(item.sellingPrice) %></span>
+                </li>
+              <% }) %>
+            </ul>
+          </div>
+        </div>
+        <% } %>
+      </div>
+    </div>
+    <% if (reservation.accommodations?.length) { %>
+    <div class="card reservation-detail-card mt-3">
+      <div class="card-header"><i class="fa-solid fa-hotel me-2 text-primary"></i>بيانات الإقامة</div>
+      <div class="card-body">
+        <% reservation.accommodations.forEach(acc => { %>
+          <ul class="detail-list mb-3">
+            <% if (acc.city) { %><li><span>المدينة</span><strong><%= cityLabel(acc.city) %></strong></li><% } %>
+            <% if (acc.hotelName) { %><li><span>الفندق</span><strong><%= acc.hotelName %></strong></li><% } %>
+            <% if (acc.checkInDate) { %><li><span>الدخول</span><strong><%= formatDate(acc.checkInDate) %></strong></li><% } %>
+            <% if (acc.checkOutDate) { %><li><span>الخروج</span><strong><%= formatDate(acc.checkOutDate) %></strong></li><% } %>
+            <% if (acc.nights) { %><li><span>الليالي</span><strong><%= acc.nights %></strong></li><% } %>
+          </ul>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="card table-card mb-4">
+  <div class="card-header"><i class="fa-solid fa-users me-2 text-primary"></i>المعتمرين (<%= reservation.members.length %>)</div>
+  <div class="card-body p-0 table-card">
+    <table class="table table-hover mb-0 reservations-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الاسم</th>
+          <th>الفئة</th>
+          <th>الجنس</th>
+          <th>جواز السفر</th>
+          <th>مكة / المدينة</th>
+          <th>نوع الغرفة</th>
+          <th>التأشيرة</th>
+          <th>النقل</th>
+          <th>السعر</th>
+          <th>VIP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% reservation.members.forEach((m, i) => { %>
+          <% const memberVips = (reservation.selectedVipItems || []).filter((v) => v.scope === 'member' && v.memberIndex === i); %>
+          <tr>
+            <td><span class="member-row-num d-inline-flex" style="width:24px;height:24px;font-size:11px;"><%= i + 1 %></span></td>
+            <td class="fw-semibold"><%= m.name %></td>
+            <td><%= statusLabel(m.type) %></td>
+            <td><%= genderLabel(m.gender) %></td>
+            <td class="text-muted"><%= m.passport || '—' %></td>
+            <td class="text-muted small">
+              <%= m.meccaHotelId?.name || m.hotelId?.name || '—' %>
+              <% if (m.medinaHotelId?.name) { %><br><span class="text-muted">المدينة: <%= m.medinaHotelId.name %></span><% } %>
+            </td>
+            <td class="small">
+              <%= roomTypeLabel(m.roomType) || '—' %>
+              <% if (m.meccaRoomId?.roomNumber) { %><br>مكة: <%= m.meccaRoomId.roomNumber %><% } %>
+              <% if (m.medinaRoomId?.roomNumber) { %><br>المدينة: <%= m.medinaRoomId.roomNumber %><% } %>
+            </td>
+            <td><%- include('../partials/badge', { status: m.visaStatus || 'pending' }) %></td>
+            <td><%- include('../partials/badge', { status: m.transportStatus || 'pending' }) %></td>
+            <td class="fw-semibold"><%= formatCurrency(m.price) %></td>
+            <td class="small">
+              <% if (memberVips.length) { %>
+                <% memberVips.forEach((v) => { %>
+                  <span class="badge bg-warning-subtle text-dark border me-1 mb-1"><i class="fa-solid fa-gem me-1"></i><%= v.name %></span>
+                <% }) %>
+              <% } else { %>
+                <span class="text-muted">—</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card reservation-pricing-card mb-4">
+  <div class="card-header"><i class="fa-solid fa-receipt me-2 text-primary"></i>ملخص السعر</div>
+  <div class="card-body">
+    <div class="pricing-summary-totals" style="padding:0;background:transparent;">
+      <div class="pricing-summary-total-row">
+        <span>المجموع الفرعي</span>
+        <span><%= formatCurrency(reservation.pricingSnapshot?.subtotal) %></span>
+      </div>
+      <% if ((reservation.pricingSnapshot?.vipAddonsTotal || 0) > 0) { %>
+      <div class="pricing-summary-total-row">
+        <span>إضافات VIP</span>
+        <span><%= formatCurrency(reservation.pricingSnapshot.vipAddonsTotal) %></span>
+      </div>
+      <% } %>
+      <% if ((reservation.pricingSnapshot?.discount || 0) > 0) { %>
+      <div class="pricing-summary-total-row">
+        <span>الخصم</span>
+        <span class="text-danger">− <%= formatCurrency(reservation.pricingSnapshot.discount) %></span>
+      </div>
+      <% } %>
+      <div class="pricing-summary-total-row pricing-summary-total-row--grand">
+        <span>الإجمالي</span>
+        <span><%= formatCurrency(p.total) %></span>
+      </div>
+      <div class="pricing-summary-total-row">
+        <span>المدفوع</span>
+        <span><%= formatCurrency(p.paid) %></span>
+      </div>
+      <div class="pricing-summary-total-row pricing-summary-total-row--balance">
+        <span>المتبقي</span>
+        <span><%= formatCurrency(p.balance) %></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if (reservation.notes) { %>
+  <div class="card mb-4">
+    <div class="card-header"><i class="fa-solid fa-note-sticky me-2 text-primary"></i>ملاحظات</div>
+    <div class="card-body"><%= reservation.notes %></div>
+  </div>
+<% } %>

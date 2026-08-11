@@ -1,0 +1,37 @@
+<% const occupants = room.occupants || []; %>
+<% const capacity = room.capacity || 1; %>
+<% const bedOccupants = occupants.filter(o => o.type !== 'child_no_bed' && o.type !== 'infant'); %>
+<% const searchText = [room.roomNumber, room.type, room.status, ...occupants.map(o => o.name)].join(' '); %>
+<div class="acc-room-card acc-room-card--<%= room.status %>"
+     data-status="<%= room.status %>"
+     data-type="<%= room.type %>"
+     data-search="<%= searchText %>">
+  <div class="acc-room-card-head">
+    <div class="acc-room-card-title">
+      <span class="acc-room-number"><%= room.roomNumber %></span>
+      <span class="acc-room-type"><%= roomTypeLabel(room.type) %></span>
+    </div>
+    <%- include('../../partials/badge', { status: room.status }) %>
+  </div>
+  <div class="acc-beds" aria-label="أسرة الغرفة">
+    <% for (let i = 0; i < capacity; i++) { %>
+      <% const occ = bedOccupants[i]; %>
+      <div class="acc-bed <%= occ ? 'acc-bed--filled' : 'acc-bed--empty' %>">
+        <i class="fa-solid fa-bed acc-bed-icon" aria-hidden="true"></i>
+        <span class="acc-bed-name"><%= occ ? occ.name : 'فارغ' %></span>
+      </div>
+    <% } %>
+  </div>
+  <% if (room.bedsUsed > 0) { %>
+    <div class="acc-room-meta">
+      <span><%= room.bedsUsed %>/<%= capacity %> سرير</span>
+      <% if (room.availableBeds > 0) { %>
+        <span class="acc-room-free-beds">+<%= room.availableBeds %> متاح</span>
+      <% } %>
+    </div>
+  <% } else if (room.availableBeds > 0 || capacity > 0) { %>
+    <div class="acc-room-meta">
+      <span class="acc-room-free-beds"><%= room.availableBeds || capacity %> سرير متاح</span>
+    </div>
+  <% } %>
+</div>

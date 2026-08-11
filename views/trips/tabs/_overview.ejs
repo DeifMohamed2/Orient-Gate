@@ -1,0 +1,355 @@
+<div class="trip-hub-overview">
+  <%
+    const flights = typeof resolveFlightLegs === 'function' ? resolveFlightLegs(trip) : { outbound: {}, return: {} };
+    const outbound = flights.outbound || {};
+    const returnLeg = flights.return || {};
+    const cs = profitability.costSummary;
+    const pricing = trip.pricing || {};
+    const starRoomPrices = pricing.starRoomPrices || {};
+    const deductions = pricing.deductions || {};
+    const tripCosts = trip.costs || {};
+    const roomTypes = ['quad', 'triple', 'double', 'single'];
+    const starTiers = ['economy', '3', '4', '5'].filter((st) => {
+      const tier = starRoomPrices[st];
+      return tier && Object.values(tier).some((v) => Number(v) > 0);
+    });
+    const vipItems = pricing.vipItems || [];
+    const hasSellingPrices = starTiers.length > 0;
+    const hasDeductions = Object.values(deductions).some((v) => Number(v) > 0);
+  %>
+
+  <% if (alerts && alerts.length) { %>
+  <div class="trip-hub-alerts mb-3">
+    <% alerts.forEach(a => { %>
+      <div class="trip-hub-alert trip-hub-alert--<%= a.type %>">
+        <i class="fa-solid <%= a.icon %>"></i>
+        <span><%= a.text %></span>
+      </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (cs && !cs.hasPaidBookings && cs.projectedTripCosts > 0) { %>
+  <div class="trip-hub-alert trip-hub-alert--info mb-3">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>لا توجد حجوزات مدفوعة بعد — تكاليف الرحلة المتوقعة (بدل المشرفين وغيرها): <strong><%= formatCurrency(cs.projectedTripCosts) %></strong>. صافي الربح يُحسب عند وجود تحصيل فعلي.</span>
+  </div>
+  <% } %>
+
+  <div class="trip-hub-context-bar mb-3">
+    <div class="trip-hub-context-item"><span class="trip-hub-context-label">معتمرين</span><strong class="trip-hub-context-value"><%= reservationStats.totalPassengers %></strong></div>
+    <div class="trip-hub-context-item"><span class="trip-hub-context-label">محصل</span><strong class="trip-hub-context-value text-success"><%= formatCurrency(profitability.collectedRevenue) %></strong></div>
+    <div class="trip-hub-context-item<%= profitability.outstanding > 0 ? ' trip-hub-context-item--warn' : '' %>"><span class="trip-hub-context-label">مستحق</span><strong class="trip-hub-context-value"><%= formatCurrency(profitability.outstanding) %></strong></div>
+    <div class="trip-hub-context-item"><span class="trip-hub-context-label">صافي الربح</span><strong class="trip-hub-context-value <%= profitability.netProfit >= 0 ? 'text-success' : 'text-danger' %>"><%= formatCurrency(profitability.netProfit) %></strong></div>
+  </div>
+
+  <!-- إشغال وتحصيل -->
+  <div class="overview-section mb-3">
+    <h5 class="overview-section-title"><i class="fa-solid fa-chart-pie me-2"></i>إشغال وتحصيل</h5>
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="card chart-card trip-hub-chart-card h-100">
+          <div class="card-header">إشغال المقاعد</div>
+          <div class="card-body"><div id="tripHubSeatChart" class="chart-mount chart-mount--sm"></div></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card chart-card trip-hub-chart-card h-100">
+          <div class="card-header">إشغال الأسرة</div>
+          <div class="card-body"><div id="tripHubRoomChart" class="chart-mount chart-mount--sm"></div></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card chart-card trip-hub-chart-card h-100">
+          <div class="card-header">حالة الدفع</div>
+          <div class="card-body"><div id="tripHubPaymentChart" class="chart-mount chart-mount--sm"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ملخص مالي -->
+  <div class="overview-section mb-3">
+    <h5 class="overview-section-title"><i class="fa-solid fa-coins me-2"></i>الملخص المالي</h5>
+    <div class="row g-3">
+      <div class="col-lg-12">
+        <div class="card chart-card trip-hub-chart-card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>الإيرادات والتحصيل</span>
+            <a href="/trips/<%= trip._id %>?tab=finance" class="btn btn-sm btn-outline-primary">تفاصيل المالية</a>
+          </div>
+          <div class="card-body"><div id="tripHubRevenueChart" class="chart-mount"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- أسعار البيع -->
+  <div class="overview-section mb-3">
+    <h5 class="overview-section-title"><i class="fa-solid fa-tags me-2"></i>أسعار البيع (جنيه)</h5>
+    <div class="card">
+      <div class="card-body">
+        <% if (hasSellingPrices) { %>
+        <div class="overview-price-matrix-wrap">
+          <table class="table table-sm overview-price-matrix mb-0">
+            <thead>
+              <tr>
+                <th>الباقة</th>
+                <% roomTypes.forEach(rt => { %>
+                  <th class="text-center"><%= roomTypeLabel(rt) %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody>
+              <% starTiers.forEach(st => { %>
+                <tr>
+                  <td><strong><%= packageStarsLabel(st) %></strong></td>
+                  <% roomTypes.forEach(rt => { %>
+                    <td class="text-center"><%= formatCurrency(starRoomPrices[st]?.[rt] || 0) %></td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <% } else { %>
+        <p class="text-muted mb-0">لم تُحدد أسعار الباقات — <a href="/trips/<%= trip._id %>/edit">عدّل الرحلة</a></p>
+        <% } %>
+
+        <% if (hasDeductions) { %>
+        <div class="overview-subsection mt-3">
+          <h6 class="overview-subsection-title">خصومات الخدمات (عند عدم اختيار الخدمة)</h6>
+          <div class="overview-chip-row">
+            <% if (deductions.flight) { %><span class="overview-chip"><i class="fa-solid fa-plane"></i> طيران: <%= formatCurrency(deductions.flight) %></span><% } %>
+            <% if (deductions.visa) { %><span class="overview-chip"><i class="fa-solid fa-passport"></i> تأشيرة: <%= formatCurrency(deductions.visa) %></span><% } %>
+            <% if (deductions.transport) { %><span class="overview-chip"><i class="fa-solid fa-bus"></i> نقل: <%= formatCurrency(deductions.transport) %></span><% } %>
+            <% if (deductions.haramainTrain) { %><span class="overview-chip"><i class="fa-solid fa-train"></i> قطار حرمين: <%= formatCurrency(deductions.haramainTrain) %></span><% } %>
+          </div>
+        </div>
+        <% } %>
+
+        <% if (vipItems.length) { %>
+        <div class="overview-subsection mt-3">
+          <h6 class="overview-subsection-title">خدمات VIP</h6>
+          <ul class="overview-vip-list">
+            <% vipItems.forEach(item => { %>
+              <li><i class="fa-solid fa-gem text-primary me-1"></i> <%= item.name %> — <strong><%= formatCurrency(item.sellingPrice) %></strong></li>
+            <% }) %>
+          </ul>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- تكاليف الرحلة -->
+  <div class="overview-section mb-3">
+    <h5 class="overview-section-title"><i class="fa-solid fa-calculator me-2"></i>تكاليف الرحلة</h5>
+    <div class="card">
+      <div class="card-body">
+        <% if (cs && cs.costsConfigured) { %>
+        <div class="row g-3 mb-3">
+          <div class="col-md-3 col-6">
+            <div class="overview-cost-tile">
+              <span class="overview-cost-tile__label">تذكرة طيران</span>
+              <strong><%= formatCurrency(tripCosts.flightTicketCostEgp) %></strong>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="overview-cost-tile">
+              <span class="overview-cost-tile__label">تأشيرة مصر (بوابة)</span>
+              <strong><%= formatCurrency(tripCosts.visaEgyptPortalEgp) %></strong>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="overview-cost-tile">
+              <span class="overview-cost-tile__label">تأشيرة سعودية (سمسار)</span>
+              <strong><%= formatCurrency(tripCosts.visaSaudiAgentSar) %> ر.س</strong>
+            </div>
+          </div>
+          <div class="col-md-3 col-6">
+            <div class="overview-cost-tile">
+              <span class="overview-cost-tile__label">سعر الصرف</span>
+              <strong><%= tripCosts.sarToEgpRate || cs.exchangeRate || '—' %> ج.م./ر.س</strong>
+            </div>
+          </div>
+          <% if (trip.supervisorId) { %>
+          <div class="col-md-3 col-6">
+            <div class="overview-cost-tile">
+              <span class="overview-cost-tile__label">بدل المشرف / يوم</span>
+              <strong><%= formatCurrency(tripCosts.supervisorDailyRateSar) %> ر.س</strong>
+            </div>
+          </div>
+          <% } %>
+          <% if (trip.assistantSupervisorId) { %>
+          <div class="col-md-3 col-6">
+            <div class="overview-cost-tile">
+              <span class="overview-cost-tile__label">بدل المساعد / يوم</span>
+              <strong><%= formatCurrency(tripCosts.assistantDailyRateSar) %> ر.س</strong>
+            </div>
+          </div>
+          <% } %>
+        </div>
+
+        <% const hnc = tripCosts.hotelNightCosts || {}; %>
+        <% const hotelsWithCosts = hotels.filter(h => hnc[String(h._id)] || hnc[h._id]); %>
+        <% if (hotelsWithCosts.length) { %>
+        <h6 class="overview-subsection-title">تكلفة ليلة الفندق (ريال / ليلة للغرفة)</h6>
+        <div class="overview-hotel-costs">
+          <% hotelsWithCosts.forEach(h => {
+            const tier = hnc[String(h._id)] || hnc[h._id] || {};
+          %>
+            <div class="overview-hotel-cost-block">
+              <div class="overview-hotel-cost-head">
+                <strong><%= h.name %></strong>
+                <span class="text-muted small"><%= cityLabel(h.city) %> • <%= h.stars %> نجوم • <%= h.nights || '—' %> ليلة</span>
+              </div>
+              <div class="overview-chip-row">
+                <% roomTypes.forEach(rt => { %>
+                  <% if (tier[rt]) { %>
+                    <span class="overview-chip overview-chip--sm"><%= roomTypeLabel(rt) %>: <%= formatCurrency(tier[rt]) %> ر.س</span>
+                  <% } %>
+                <% }) %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+        <% } %>
+
+        <% if (cs && cs.hasPaidBookings) { %>
+        <div class="overview-subsection mt-3 pt-3 border-top">
+          <h6 class="overview-subsection-title">تكاليف فعلية (حجوزات مدفوعة)</h6>
+          <div class="row g-2 small">
+            <div class="col-md-3"><span class="text-muted">تأشيرة:</span> <strong><%= formatCurrency(cs.breakdown.visa) %></strong></div>
+            <div class="col-md-3"><span class="text-muted">طيران:</span> <strong><%= formatCurrency(cs.breakdown.flight) %></strong></div>
+            <div class="col-md-3"><span class="text-muted">سكن مكة:</span> <strong><%= formatCurrency(cs.breakdown.accommodationMecca) %></strong></div>
+            <div class="col-md-3"><span class="text-muted">سكن المدينة:</span> <strong><%= formatCurrency(cs.breakdown.accommodationMedina) %></strong></div>
+          </div>
+        </div>
+        <% } %>
+        <% } else { %>
+        <p class="text-muted mb-0">لم تُدخل تكاليف الرحلة — <a href="/trips/<%= trip._id %>/edit">عدّل الرحلة</a> لإدخال التكاليف وحساب الربحية بدقة.</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- تفاصيل الرحلة والفنادق -->
+  <div class="overview-section mb-3">
+    <h5 class="overview-section-title"><i class="fa-solid fa-plane-departure me-2"></i>تفاصيل الرحلة والإقامة</h5>
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header">معلومات الرحلة</div>
+          <div class="card-body">
+            <ul class="detail-list">
+              <li><span>الدولة</span><strong><%= trip.country || '—' %></strong></li>
+              <li><span>المدة</span><strong><%= trip.durationDays %> أيام / <%= trip.durationNights %> ليالي</strong></li>
+              <li><span>التواريخ</span><strong><%= formatDate(trip.startDate) %> — <%= formatDate(trip.endDate) %></strong></li>
+              <% if (trip.travelRoute) { %>
+              <li><span>مسار السفر</span><strong><%= trip.travelRoute %></strong></li>
+              <% } %>
+              <% if (trip.airline || outbound.airline) { %>
+              <li><span>الخطوط</span><strong><%= trip.airline || outbound.airline %></strong></li>
+              <% } %>
+              <li><span>الذهاب</span><strong>
+                <%= outbound.departureAirport || '—' %> → <%= outbound.arrivalAirport || '—' %>
+                <% if (outbound.flightNumber) { %> • <%= outbound.flightNumber %><% } %>
+                <% if (outbound.departureTime || outbound.arrivalTime) { %> • <%= outbound.departureTime || '—' %> – <%= outbound.arrivalTime || '—' %><% } %>
+              </strong></li>
+              <li><span>العودة</span><strong>
+                <%= returnLeg.departureAirport || '—' %> → <%= returnLeg.arrivalAirport || '—' %>
+                <% if (returnLeg.flightNumber) { %> • <%= returnLeg.flightNumber %><% } %>
+                <% if (returnLeg.departureTime || returnLeg.arrivalTime) { %> • <%= returnLeg.departureTime || '—' %> – <%= returnLeg.arrivalTime || '—' %><% } %>
+              </strong></li>
+              <% if (trip.gatheringTime || trip.gatheringLocation) { %>
+              <li><span>التجمع</span><strong><%= trip.gatheringTime || '—' %> — <%= trip.gatheringLocation || '—' %></strong></li>
+              <% } %>
+              <% if (trip.supervisorId) { %>
+              <li><span>المشرف</span><strong>
+                <a href="/supervisors/<%= trip.supervisorId._id || trip.supervisorId %>"><%= trip.supervisorId.name || trip.guide || '—' %></a>
+              </strong></li>
+              <% } else if (trip.guide) { %>
+              <li><span>المشرف</span><strong><%= trip.guide %></strong></li>
+              <% } %>
+              <% if (trip.assistantSupervisorId) { %>
+              <li><span>مساعد المشرف</span><strong>
+                <a href="/supervisors/<%= trip.assistantSupervisorId._id || trip.assistantSupervisorId %>"><%= trip.assistantSupervisorId.name %></a>
+              </strong></li>
+              <% } %>
+              <% if (trip.guidePhone || trip.guidePhoneSa || trip.supervisorId?.phoneEg || trip.supervisorId?.phoneSa) { %>
+              <li><span>هاتف المشرف</span><strong>
+                <%= trip.supervisorId?.phoneEg || trip.guidePhone || '—' %> / <%= trip.supervisorId?.phoneSa || trip.guidePhoneSa || '—' %>
+              </strong></li>
+              <% } %>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>الفنادق والباقات</span>
+            <a href="/trips/<%= trip._id %>?tab=accommodation" class="btn btn-sm btn-outline-primary">إدارة التسكين</a>
+          </div>
+          <div class="card-body">
+            <% hotels.forEach(h => { %>
+              <div class="trip-hub-hotel-item">
+                <strong><%= h.name %></strong>
+                <span class="text-muted small"><%= cityLabel(h.city) %> • <%= packageStarsLabel(h.stars) %> • <%= h.nights || '—' %> ليلة</span>
+              </div>
+            <% }) %>
+            <% if (!hotels.length) { %><p class="text-muted mb-0">لا توجد فنادق — <a href="/trips/<%= trip._id %>?tab=accommodation">أضف فندق</a></p><% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- آخر الحجوزات والمدفوعات -->
+  <div class="overview-section mb-3">
+    <h5 class="overview-section-title"><i class="fa-solid fa-clock-rotate-left me-2"></i>آخر النشاط</h5>
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between">
+            <span>آخر الحجوزات</span>
+            <a href="/trips/<%= trip._id %>?tab=reservations" class="small">عرض الكل</a>
+          </div>
+          <div class="card-body p-0">
+            <ul class="trip-hub-mini-list">
+              <% (recentReservations || []).forEach(r => { %>
+                <li>
+                  <a href="/reservations/<%= r._id %>"><%= r.primaryCustomerName %></a>
+                  <span class="text-muted small"><%= r.reservationNumber %></span>
+                  <%- include('../../partials/badge', { status: r.paymentStatus }) %>
+                </li>
+              <% }) %>
+              <% if (!(recentReservations || []).length) { %><li class="text-muted text-center py-3">لا توجد حجوزات</li><% } %>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between">
+            <span>آخر المدفوعات</span>
+            <a href="/trips/<%= trip._id %>?tab=finance" class="small">عرض الكل</a>
+          </div>
+          <div class="card-body p-0">
+            <ul class="trip-hub-mini-list">
+              <% (recentPayments || []).forEach(p => { %>
+                <li>
+                  <span><%= paymentMethodLabel(p.method) %></span>
+                  <span class="text-muted small"><%= formatDate(p.paymentDate) %></span>
+                  <strong class="text-success"><%= formatCurrency(p.amount) %></strong>
+                </li>
+              <% }) %>
+              <% if (!(recentPayments || []).length) { %><li class="text-muted text-center py-3">لا توجد مدفوعات</li><% } %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

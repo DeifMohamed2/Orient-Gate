@@ -1,0 +1,165 @@
+<div class="ops-hub-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">إشعارات الوصول</h1>
+    <p class="ops-hub-sub">إدارة إشعارات وصول المعتمرين — الوكيل: <strong><%= settings.agentName %></strong></p>
+  </div>
+  <div class="page-actions ops-hub-actions">
+    <a href="/settings/agency" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-gear me-1"></i> إعدادات الوكيل</a>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-file-lines"></i></div>
+    <div class="kpi-body"><div class="kpi-label">إجمالي الإشعارات</div><div class="kpi-value"><%= stats.total %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="kpi-body"><div class="kpi-label">صادرة</div><div class="kpi-value"><%= stats.issued %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-pen"></i></div>
+    <div class="kpi-body"><div class="kpi-label">مسودات</div><div class="kpi-value"><%= stats.drafts %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-plane"></i></div>
+    <div class="kpi-body"><div class="kpi-label">رحلات بدون إشعار</div><div class="kpi-value"><%= stats.tripsWithoutNotice %></div></div>
+  </div>
+</div>
+
+<form class="card ops-filters mb-4" method="GET">
+  <div class="ops-filters-inner">
+    <div class="ops-filter-search">
+      <i class="fa-solid fa-magnifying-glass ops-filter-icon"></i>
+      <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث برقم الإشعار أو اسم الرحلة...">
+    </div>
+    <div class="ops-filter-field">
+      <select name="tripId" class="form-select">
+        <option value="">كل الرحلات</option>
+        <% trips.forEach(t => { %>
+          <option value="<%= t._id %>" <%= filters.tripId === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="ops-filter-field">
+      <select name="status" class="form-select">
+        <option value="">كل الحالات</option>
+        <option value="draft" <%= filters.status === 'draft' ? 'selected' : '' %>>مسودة</option>
+        <option value="issued" <%= filters.status === 'issued' ? 'selected' : '' %>>صادر</option>
+      </select>
+    </div>
+    <div class="ops-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> تطبيق</button>
+      <% if (hasActiveFilters) { %><a href="/arrival-notices" class="btn btn-outline-primary">مسح</a><% } %>
+    </div>
+  </div>
+  <div class="ops-stats">
+    <span class="trip-rail-count"><%= pagination.totalCount %> نتيجة</span>
+    <% if (pagination.totalPages > 1) { %>
+      <span class="text-muted small">•</span>
+      <span class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></span>
+    <% } %>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover ops-table mb-0">
+      <thead>
+        <tr>
+          <th>رقم الإشعار</th>
+          <th>الرحلة</th>
+          <th>المعتمرين</th>
+          <th>الوكيل</th>
+          <th>الحالة</th>
+          <th>آخر تحديث</th>
+          <th class="text-end">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!notices.length) { %>
+          <tr><td colspan="7" class="text-center text-muted py-5">لا توجد إشعارات وصول</td></tr>
+        <% } %>
+        <% notices.forEach(n => { %>
+          <tr>
+            <td><strong>#<%= n.noticeNumber %></strong></td>
+            <td>
+              <% if (n.tripId) { %>
+                <a href="/trips/<%= n.tripId._id %>?tab=arrival"><%= n.tripId.name %></a>
+              <% } else { %>—<% } %>
+            </td>
+            <td><%= n.pilgrimCount || 0 %></td>
+            <td><%= settings.agentName %></td>
+            <td>
+              <% if (n.status === 'issued') { %>
+                <span class="badge bg-success">صادر</span>
+              <% } else { %>
+                <span class="badge bg-secondary">مسودة</span>
+              <% } %>
+            </td>
+            <td><%= formatDate(n.updatedAt) %></td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="/arrival-notices/<%= n._id %>/edit" class="btn btn-outline-primary" title="تعديل"><i class="fa-solid fa-pen"></i></a>
+                <a href="/arrival-notices/<%= n._id %>/print" class="btn btn-outline-primary" title="طباعة" target="_blank"><i class="fa-solid fa-print"></i></a>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if (pagination.totalPages > 1) { %>
+<nav class="ops-pagination mt-3" aria-label="صفحات">
+  <ul class="pagination pagination-sm justify-content-center mb-0">
+    <% if (pagination.hasPrev) { %>
+      <li class="page-item"><a class="page-link" href="/arrival-notices<%= buildQueryString({ ...filters, page: pagination.page - 1 }) %>">السابق</a></li>
+    <% } %>
+    <% for (let p = 1; p <= pagination.totalPages; p++) { %>
+      <li class="page-item <%= p === pagination.page ? 'active' : '' %>">
+        <a class="page-link" href="/arrival-notices<%= buildQueryString({ ...filters, page: p }) %>"><%= p %></a>
+      </li>
+    <% } %>
+    <% if (pagination.hasNext) { %>
+      <li class="page-item"><a class="page-link" href="/arrival-notices<%= buildQueryString({ ...filters, page: pagination.page + 1 }) %>">التالي</a></li>
+    <% } %>
+  </ul>
+</nav>
+<% } %>
+
+<div class="card mt-4">
+  <div class="card-header"><i class="fa-solid fa-plus me-2"></i> إنشاء إشعار لرحلة</div>
+  <div class="card-body">
+    <form method="GET" action="/arrival-notices/trip/" id="createNoticeForm" class="row g-2 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label">اختر الرحلة</label>
+        <select class="form-select" id="createNoticeTrip" required>
+          <option value="">— اختر رحلة —</option>
+          <% trips.forEach(t => { %>
+            <option value="<%= t._id %>"><%= t.name %> — <%= formatDate(t.startDate) %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary w-100" id="createNoticeBtn" disabled>
+          <i class="fa-solid fa-file-circle-plus me-1"></i> إنشاء / فتح الإشعار
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const sel = document.getElementById('createNoticeTrip');
+  const btn = document.getElementById('createNoticeBtn');
+  const form = document.getElementById('createNoticeForm');
+  if (!sel || !form) return;
+  sel.addEventListener('change', () => {
+    btn.disabled = !sel.value;
+    if (sel.value) form.action = '/arrival-notices/trip/' + sel.value;
+  });
+})();
+</script>

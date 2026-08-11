@@ -1,0 +1,13 @@
+<% movements.forEach((m, i) => { %>
+<tr class="movement-row" data-index="<%= i %>">
+  <td class="text-center movement-num"><%= i + 1 %></td>
+  <td><input class="form-control form-control-sm" name="movements[<%= i %>][description]" value="<%= m.description || '' %>" placeholder="استقبال"></td>
+  <td><input class="form-control form-control-sm" name="movements[<%= i %>][from]" value="<%= m.from || '' %>"></td>
+  <td><input class="form-control form-control-sm" name="movements[<%= i %>][to]" value="<%= m.to || '' %>"></td>
+  <td><input class="form-control form-control-sm" name="movements[<%= i %>][time]" value="<%= m.time || '' %>"></td>
+  <td><input type="date" class="form-control form-control-sm" name="movements[<%= i %>][date]" value="<%= m.date ? new Date(m.date).toISOString().split('T')[0] : '' %>"></td>
+  <td class="text-center">
+    <button type="button" class="btn btn-sm btn-outline-danger remove-movement" title="حذف"><i class="fa-solid fa-times"></i></button>
+  </td>
+</tr>
+<% }) %>

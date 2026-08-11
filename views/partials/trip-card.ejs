@@ -1,0 +1,62 @@
+<% const showBookBtn = typeof showBookButton !== 'undefined' && showBookButton; %>
+<div class="trip-card trip-card--pro" data-trip-id="<%= trip._id %>" data-status="<%= trip.status %>" data-trip-name="<%= trip.name %>">
+  <div class="trip-card-accent"></div>
+  <div class="trip-card-compact">
+    <div class="trip-card-top">
+      <div class="trip-card-icon" aria-hidden="true"><i class="fa-solid fa-plane"></i></div>
+      <div class="trip-card-head">
+        <div class="trip-card-title-row">
+          <h3 class="trip-card-title"><%= trip.name %></h3>
+          <%- include('./badge', { status: trip.status }) %>
+        </div>
+        <p class="trip-card-date">
+          <i class="fa-regular fa-calendar me-1"></i><%= formatDate(trip.startDate) %>
+          <span class="trip-card-duration">• <%= trip.durationDays %> يوم</span>
+        </p>
+        <% if (trip.airline) { %><p class="trip-card-meta"><i class="fa-solid fa-plane-up me-1"></i><%= trip.airline %></p><% } %>
+      </div>
+    </div>
+
+    <div class="trip-card-metrics">
+      <div class="trip-metric">
+        <div class="trip-metric-header">
+          <span class="trip-metric-label">المقاعد</span>
+          <span class="trip-metric-value"><%= seatStats.reserved %><small>/<%= seatStats.total %></small> <span class="trip-metric-pct"><%= seatStats.percentSold %>%</span></span>
+        </div>
+        <div class="trip-progress <%= seatUrgencyClass(seatStats) %>">
+          <div class="trip-progress-bar" style="width:<%= Math.min(seatStats.percentSold, 100) %>%"></div>
+        </div>
+      </div>
+      <div class="trip-metric-grid">
+        <div class="trip-stat"><span>متبقي</span><strong class="<%= seatStats.isLow || seatStats.isOverbooked ? 'text-warning' : '' %>"><%= seatStats.remaining %></strong></div>
+        <div class="trip-stat"><span>فنادق</span><strong><%= hotelCount %></strong></div>
+        <div class="trip-stat"><span>حجوزات</span><strong><%= profitability.reservationCount || 0 %></strong></div>
+        <div class="trip-stat"><span>مستحق</span><strong class="<%= profitability.outstanding > 0 ? 'text-danger' : '' %>"><%= (profitability.outstanding || 0).toLocaleString('ar-EG') %></strong></div>
+      </div>
+    </div>
+
+    <div class="trip-card-footer">
+      <div class="trip-card-revenue-wrap">
+        <span class="trip-card-revenue-label">المحصل</span>
+        <span class="trip-card-revenue"><%= formatCurrency(profitability.collectedRevenue) %></span>
+      </div>
+      <div class="trip-card-actions">
+        <% if (showBookBtn) { %>
+          <a href="/reservations/new?tripId=<%= trip._id %>" class="btn btn-primary btn-sm trip-card-cta" title="حجز جديد"><i class="fa-solid fa-plus me-1"></i>حجز</a>
+        <% } %>
+        <a href="/trips/<%= trip._id %>" class="btn btn-icon" title="عرض التفاصيل"><i class="fa-solid fa-eye"></i></a>
+        <a href="/trips/<%= trip._id %>?tab=accommodation" class="btn btn-icon" title="تسكين"><i class="fa-solid fa-bed"></i></a>
+        <a href="/trips/<%= trip._id %>?tab=finance" class="btn btn-icon" title="مالية"><i class="fa-solid fa-wallet"></i></a>
+      </div>
+    </div>
+
+    <div class="trip-card-urgency">
+      <% if (seatStats.isOverbooked) { %>
+        <span class="trip-urgency trip-urgency--danger"><i class="fa-solid fa-triangle-exclamation"></i> مقاعد مكتملة</span>
+      <% } else if (seatStats.isLow) { %>
+        <span class="trip-urgency trip-urgency--warning"><i class="fa-solid fa-chair"></i> <%= seatStats.remaining %> مقعد متبقي</span>
+      <% } %>
+      <span class="trip-urgency trip-urgency--info"><i class="fa-regular fa-clock"></i> <%= departureLabel(trip.startDate) %></span>
+    </div>
+  </div>
+</div>

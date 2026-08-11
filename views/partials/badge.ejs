@@ -1,0 +1,12 @@
+<% 
+  const map = {
+    active: 'success', completed: 'info', cancelled: 'danger',
+    pending: 'warning', submitted: 'warning', approved: 'info', rejected: 'danger', issued: 'success',
+    assigned: 'info', confirmed: 'success',
+    unpaid: 'danger', partial: 'warning', paid: 'success', refunded: 'secondary',
+    available: 'success', reserved: 'warning', occupied: 'primary', maintenance: 'secondary',
+  };
+  const cls = map[status] || 'secondary';
+  const label = typeof statusLabel === 'function' ? statusLabel(status) : status;
+%>
+<span class="badge badge-status badge-<%= cls %>"><%= label %></span>

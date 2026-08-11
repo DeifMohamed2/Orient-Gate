@@ -1,0 +1,170 @@
+<div class="trip-hub-panel" id="accommodationBoard">
+  <!-- Toolbar -->
+  <div class="acc-toolbar card mb-3">
+    <div class="acc-toolbar-row">
+      <div class="acc-toolbar-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" id="accSearch" class="form-control form-control-sm" placeholder="بحث برقم الغرفة أو النزيل...">
+      </div>
+      <div class="acc-toolbar-actions">
+        <% if ((hotelGroups || []).length) { %>
+          <a href="/trips/<%= trip._id %>/accommodation/export?print=1" target="_blank" class="btn btn-outline-primary btn-sm" title="تصدير كل الفنادق">
+            <i class="fa-solid fa-file-export me-1"></i> تصدير الكل
+          </a>
+        <% } %>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="accExpandAll">توسيع الكل</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="accCollapseAll">طي الكل</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="accToggleForms" aria-expanded="false">
+          <i class="fa-solid fa-plus me-1"></i> إضافة
+        </button>
+      </div>
+    </div>
+    <div class="acc-filter-chips">
+      <span class="acc-filter-label">الحالة:</span>
+      <button type="button" class="acc-chip is-active" data-acc-filter="status" data-value="">الكل</button>
+      <button type="button" class="acc-chip" data-acc-filter="status" data-value="available">متاح</button>
+      <button type="button" class="acc-chip" data-acc-filter="status" data-value="reserved">محجوز</button>
+      <button type="button" class="acc-chip" data-acc-filter="status" data-value="occupied">مشغول</button>
+    </div>
+    <div class="acc-filter-chips">
+      <span class="acc-filter-label">النوع:</span>
+      <button type="button" class="acc-chip is-active" data-acc-filter="type" data-value="">الكل</button>
+      <button type="button" class="acc-chip" data-acc-filter="type" data-value="single">فردي</button>
+      <button type="button" class="acc-chip" data-acc-filter="type" data-value="double">دبل</button>
+      <button type="button" class="acc-chip" data-acc-filter="type" data-value="triple">ثلاثي</button>
+      <button type="button" class="acc-chip" data-acc-filter="type" data-value="quad">رباعي</button>
+    </div>
+  </div>
+
+  <!-- Add forms (collapsed by default) -->
+  <details class="acc-add-forms mb-3" id="accAddForms">
+    <summary class="acc-add-forms-summary">إضافة فندق أو غرف</summary>
+    <div class="acc-add-forms-body">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header">إضافة فندق</div>
+            <div class="card-body">
+              <form method="POST" action="/trips/<%= trip._id %>/hotels">
+                <input type="hidden" name="tripId" value="<%= trip._id %>">
+                <div class="mb-3"><label class="form-label">اسم الفندق</label><input class="form-control form-control-sm" name="name" required></div>
+                <div class="row g-2 mb-3">
+                  <div class="col-6"><label class="form-label">المدينة</label><select name="city" class="form-select form-select-sm" required><option value="mecca">مكة المكرمة</option><option value="medina">المدينة المنورة</option></select></div>
+                  <div class="col-6"><label class="form-label">النجوم</label><select name="stars" class="form-select form-select-sm"><option value="economy">اقتصادي</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-4"><label class="form-label">دخول</label><input type="date" class="form-control form-control-sm" name="checkInDate"></div>
+                  <div class="col-4"><label class="form-label">خروج</label><input type="date" class="form-control form-control-sm" name="checkOutDate"></div>
+                  <div class="col-4"><label class="form-label">ليالي</label><input type="number" class="form-control form-control-sm" name="nights"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" type="submit">إضافة فندق</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card h-100">
+            <div class="card-header">إضافة غرف</div>
+            <div class="card-body">
+              <form method="POST" action="/trips/<%= trip._id %>/rooms/batch">
+                <input type="hidden" name="tripId" value="<%= trip._id %>">
+                <input type="hidden" name="startNumber" value="1">
+                <div class="mb-3"><label class="form-label">الفندق</label><select name="hotelId" class="form-select form-select-sm" required>
+                  <% hotels.forEach(h => { %><option value="<%= h._id %>"><%= h.name %> — <%= cityLabel(h.city) %></option><% }) %>
+                </select></div>
+                <div class="row g-2 mb-3">
+                  <div class="col-6"><label class="form-label">نوع الغرفة</label><select name="type" class="form-select form-select-sm" required><option value="single">فردي</option><option value="double">دبل</option><option value="triple">ثلاثي</option><option value="quad">رباعي</option></select></div>
+                  <div class="col-3"><label class="form-label">العدد</label><input type="number" class="form-control form-control-sm" name="count" value="1" min="1" required></div>
+                  <div class="col-3"><label class="form-label">السعر</label><input type="number" class="form-control form-control-sm" name="price" value="0"></div>
+                </div>
+                <button class="btn btn-primary btn-sm" type="submit">إضافة غرف</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- Manual assign -->
+  <div class="card mb-3 acc-assign-bar">
+    <div class="card-body py-3">
+      <form method="POST" action="/trips/<%= trip._id %>/rooms/assign" id="manualAssignForm" class="acc-assign-form">
+        <input type="hidden" name="tripId" value="<%= trip._id %>">
+        <input type="hidden" name="reservationId" id="manualReservationId">
+        <input type="hidden" name="hotelId" id="manualHotelId">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-1"><label class="form-label mb-0 small fw-bold">تسكين يدوي</label></div>
+          <div class="col-md-4">
+            <label class="form-label small">المعتمر</label>
+            <select name="memberId" class="form-select form-select-sm" required id="manualMemberSelect">
+              <% (reservations || []).forEach(r => { r.members.forEach(m => { %>
+                <option value="<%= m._id %>" data-reservation="<%= r._id %>"><%= r.reservationNumber %> — <%= m.name %></option>
+              <% }) }) %>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">الغرفة</label>
+            <select name="roomId" class="form-select form-select-sm" required id="manualRoomSelect">
+              <% rooms.filter(r => r.status === 'available' || r.status === 'reserved').forEach(r => { %>
+                <option value="<%= r._id %>" data-hotel="<%= r.hotelId?._id %>"><%= r.roomNumber %> — <%= r.hotelId?.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="fa-solid fa-bed me-1"></i> تسكين</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hotel accordion -->
+  <div class="acc-hotels" id="accHotels">
+    <% (hotelGroups || []).forEach(({ hotel, stats, rooms: hotelRooms }, hi) => { %>
+      <details class="acc-hotel" <%= hi === 0 ? 'open' : '' %> data-hotel-id="<%= hotel._id %>">
+        <summary class="acc-hotel-header">
+          <div class="acc-hotel-info">
+            <i class="fa-solid fa-hotel acc-hotel-icon"></i>
+            <div>
+              <strong class="acc-hotel-name"><%= hotel.name %></strong>
+              <span class="acc-hotel-meta"><%= cityLabel(hotel.city) %> • <%= hotel.stars %> نجوم • <%= stats.totalRooms %> غرفة</span>
+            </div>
+          </div>
+          <div class="acc-hotel-stats">
+            <span class="acc-hotel-stat"><%= stats.bedsUsed %>/<%= stats.bedsTotal %> سرير</span>
+            <span class="acc-hotel-stat acc-hotel-stat--avail"><%= stats.availableBeds || stats.available %> سرير متاح</span>
+            <a href="/trips/<%= trip._id %>/accommodation/export/<%= hotel._id %>?print=1"
+               target="_blank"
+               class="btn btn-sm btn-outline-primary acc-hotel-export"
+               onclick="event.stopPropagation()"
+               title="تصدير تسكين الفندق">
+              <i class="fa-solid fa-file-export me-1"></i> تصدير
+            </a>
+            <div class="acc-hotel-progress">
+              <div class="acc-hotel-progress-bar" style="width:<%= stats.percentOccupied %>%"></div>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-down acc-hotel-chevron"></i>
+        </summary>
+        <div class="acc-room-grid">
+          <% hotelRooms.forEach(room => { %>
+            <%- include('../partials/_room-card', { room }) %>
+          <% }) %>
+        </div>
+      </details>
+    <% }) %>
+
+    <% if (!(hotelGroups || []).length) { %>
+      <div class="acc-empty-state">
+        <i class="fa-solid fa-bed"></i>
+        <p>لا توجد فنادق أو غرف — أضف فندقاً ثم غرفاً للبدء</p>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="acc-empty-state acc-no-results" id="accNoResults" hidden>
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <p>لا توجد غرف مطابقة للبحث أو الفلتر</p>
+  </div>
+</div>

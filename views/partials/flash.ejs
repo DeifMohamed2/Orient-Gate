@@ -1,0 +1,9 @@
+<% const flashPayload = {
+  success: flash_success || [],
+  error: flash_error || [],
+  warning: flash_warning || [],
+  info: flash_info || [],
+}; %>
+<% if (flashPayload.success.length || flashPayload.error.length || flashPayload.warning.length || flashPayload.info.length) { %>
+<script type="application/json" id="ogFlashData"><%- JSON.stringify(flashPayload) %></script>
+<% } %>

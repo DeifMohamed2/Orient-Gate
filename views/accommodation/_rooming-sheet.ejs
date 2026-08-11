@@ -1,0 +1,42 @@
+<section class="rooming-sheet">
+  <header class="rooming-sheet-header">
+    <div class="rooming-header-cell rooming-header-right">
+      <strong><%= typeof companyName !== 'undefined' ? companyName : 'أورينت جيت للسياحة' %></strong>
+    </div>
+    <div class="rooming-header-cell rooming-header-center">
+      <h1 class="rooming-hotel-name"><%= sheet.hotel.name %></h1>
+      <p class="rooming-trip-line">تسكين رحلة <%= sheet.tripDateShort %></p>
+      <p class="rooming-date-line"><%= sheet.dateRange %></p>
+      <% if (typeof tripName !== 'undefined' && tripName) { %>
+        <p class="rooming-trip-name"><%= tripName %></p>
+      <% } %>
+    </div>
+    <div class="rooming-header-cell rooming-header-left">
+      <strong><%= sheet.city %></strong>
+      <span class="rooming-hotel-meta"><%= sheet.hotel.stars %> نجوم • <%= sheet.stats.totalRooms %> غرفة • <%= sheet.stats.bedsUsed %>/<%= sheet.stats.bedsTotal %> سرير</span>
+    </div>
+  </header>
+
+  <% if (!sheet.blocks.length) { %>
+    <p class="rooming-empty">لا توجد غرف مسجلة لهذا الفندق</p>
+  <% } else { %>
+    <div class="rooming-grid">
+      <% sheet.blocks.forEach(block => { %>
+        <div class="rooming-block">
+          <div class="rooming-block-header">
+            <span class="rooming-block-title"><%= block.headerTitle %></span>
+            <span class="rooming-block-sub"><%= block.headerSub %></span>
+          </div>
+          <% block.slots.forEach(slot => { %>
+            <div class="rooming-block-row"><%= slot.name %></div>
+          <% }) %>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+
+  <footer class="rooming-sheet-footer">
+    <span>تاريخ الطباعة: <%= new Date().toLocaleDateString('ar-EG') %></span>
+    <span><%= typeof companyName !== 'undefined' ? companyName : 'أورينت جيت للسياحة' %></span>
+  </footer>
+</section>

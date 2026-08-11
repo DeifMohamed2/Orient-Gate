@@ -1,0 +1,126 @@
+<%- include('../partials/page-header', {
+  pageTitle: 'تسكين الرحلة — ' + trip.name,
+  pageSubtitle: 'موعد السفر: ' + formatDate(trip.startDate),
+  pageActionsHtml: '<a href="/trips/' + trip._id + '" class="btn btn-outline-primary btn-sm">رجوع للرحلة</a>'
+}) %>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">إضافة فندق</div>
+      <div class="card-body">
+        <form method="POST" action="/trips/<%= trip._id %>/hotels">
+          <input type="hidden" name="tripId" value="<%= trip._id %>">
+          <div class="mb-3"><label class="form-label">اسم الفندق</label><input class="form-control" name="name" required></div>
+          <div class="row g-2 mb-3">
+            <div class="col-6"><label class="form-label">المدينة</label><select name="city" class="form-select" required><option value="mecca">مكة المكرمة</option><option value="medina">المدينة المنورة</option></select></div>
+            <div class="col-6"><label class="form-label">النجوم</label><select name="stars" class="form-select"><option value="economy">اقتصادي</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-4"><label class="form-label">دخول</label><input type="date" class="form-control" name="checkInDate"></div>
+            <div class="col-4"><label class="form-label">خروج</label><input type="date" class="form-control" name="checkOutDate"></div>
+            <div class="col-4"><label class="form-label">ليالي</label><input type="number" class="form-control" name="nights"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" type="submit">إضافة فندق</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">إضافة غرف</div>
+      <div class="card-body">
+        <form method="POST" action="/trips/<%= trip._id %>/rooms/batch">
+          <input type="hidden" name="tripId" value="<%= trip._id %>">
+          <div class="mb-3"><label class="form-label">الفندق</label><select name="hotelId" class="form-select" required>
+            <% hotels.forEach(h => { %><option value="<%= h._id %>"><%= h.name %> — <%= cityLabel(h.city) %></option><% }) %>
+          </select></div>
+          <div class="row g-2 mb-3">
+            <div class="col-6"><label class="form-label">نوع الغرفة</label><select name="type" class="form-select" required><option value="single">فردي</option><option value="double">دبل</option><option value="triple">ثلاثي</option><option value="quad">رباعي</option></select></div>
+            <div class="col-3"><label class="form-label">العدد</label><input type="number" class="form-control" name="count" value="1" min="1" required></div>
+            <div class="col-3"><label class="form-label">السعر</label><input type="number" class="form-control" name="price" value="0"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" type="submit">إضافة غرف</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% summary.forEach(({ hotel, byType, totalRooms }) => { %>
+  <div class="card mb-3">
+    <div class="card-header"><%= hotel.name %> — <%= cityLabel(hotel.city) %> (<%= hotel.stars %> نجوم) — <%= totalRooms %> غرفة</div>
+    <div class="card-body">
+      <div class="kpi-grid">
+        <% Object.keys(byType).forEach(type => { %>
+          <div class="kpi-card">
+            <div class="kpi-label"><%= roomTypeLabel(type) %></div>
+            <div class="kpi-value"><%= byType[type].total %></div>
+            <div class="kpi-hint">متاح <%= byType[type].available %> | محجوز <%= byType[type].reserved %></div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+<% }) %>
+
+<div class="card mb-4">
+  <div class="card-header">تسكين يدوي</div>
+  <div class="card-body">
+    <form method="POST" action="/trips/<%= trip._id %>/rooms/assign" id="manualAssignForm">
+      <input type="hidden" name="tripId" value="<%= trip._id %>">
+      <input type="hidden" name="reservationId" id="manualReservationId">
+      <input type="hidden" name="hotelId" id="manualHotelId">
+      <div class="row g-2">
+        <div class="col-md-4"><label class="form-label">المعتمر</label>
+          <select name="memberId" class="form-select" required id="manualMemberSelect">
+            <% reservations.forEach(r => { r.members.forEach(m => { %>
+              <option value="<%= m._id %>" data-reservation="<%= r._id %>"><%= r.reservationNumber %> — <%= m.name %></option>
+            <% }) }) %>
+          </select>
+        </div>
+        <div class="col-md-4"><label class="form-label">الغرفة</label>
+          <select name="roomId" class="form-select" required id="manualRoomSelect">
+            <% rooms.filter(r => r.status === 'available' || r.status === 'reserved').forEach(r => { %>
+              <option value="<%= r._id %>" data-hotel="<%= r.hotelId?._id %>"><%= r.roomNumber %> — <%= r.hotelId?.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary btn-sm" type="submit">تسكين</button></div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card table-card">
+  <div class="card-header">قائمة الغرف</div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>رقم</th><th>الفندق</th><th>النوع</th><th>الحالة</th><th>النزلاء</th></tr></thead>
+      <tbody>
+        <% rooms.forEach(r => { %>
+          <tr>
+            <td><%= r.roomNumber %></td>
+            <td><%= r.hotelId?.name %></td>
+            <td><%= roomTypeLabel(r.type) %></td>
+            <td><%- include('../partials/badge', { status: r.status }) %></td>
+            <td><%= (r.occupants || []).map(o => o.name).join('، ') || '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const form = document.getElementById('manualAssignForm');
+    if (!form) return;
+    form.addEventListener('submit', function() {
+      const m = document.getElementById('manualMemberSelect');
+      const r = document.getElementById('manualRoomSelect');
+      if (m?.selectedOptions[0]) document.getElementById('manualReservationId').value = m.selectedOptions[0].dataset.reservation || '';
+      if (r?.selectedOptions[0]) document.getElementById('manualHotelId').value = r.selectedOptions[0].dataset.hotel || '';
+    });
+  })();
+</script>

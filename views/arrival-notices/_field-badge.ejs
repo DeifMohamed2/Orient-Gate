@@ -1,0 +1,9 @@
+<% 
+  const src = typeof fieldSources !== 'undefined' && fieldSources ? fieldSources[field] : null;
+  const label = typeof sourceLabels !== 'undefined' && sourceLabels && src ? sourceLabels[src] : null;
+%>
+<% if (label && src !== 'manual') { %>
+  <span class="arrival-src-badge arrival-src-badge--<%= src %>"><%= label %></span>
+<% } else if (src === 'manual' && typeof notice !== 'undefined' && notice[field]) { %>
+  <span class="arrival-src-badge arrival-src-badge--manual">يدوي</span>
+<% } %>

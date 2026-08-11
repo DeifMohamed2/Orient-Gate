@@ -1,0 +1,41 @@
+<%- include('../partials/page-header', {
+  pageTitle: 'التقارير',
+  pageSubtitle: 'تقارير الأداء والربحية',
+  pageActionsHtml: '<a href="/reports/export?type=profitability" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-download me-1"></i> تصدير الربحية</a><a href="/reports/export?type=outstanding" class="btn btn-outline-primary btn-sm">تصدير المتبقي</a>'
+}) %>
+
+<div class="kpi-grid mb-4">
+  <div class="kpi-card"><div class="kpi-label">إشغال الأسرة</div><div class="kpi-value"><%= occupancy.percent %>%</div><div class="kpi-hint"><%= occupancy.occupied %> / <%= occupancy.total %> سرير</div></div>
+  <div class="kpi-card"><div class="kpi-label">فواتير غير محصلة</div><div class="kpi-value"><%= outstanding.count %></div><div class="kpi-hint"><%= formatCurrency(outstanding.total) %></div></div>
+</div>
+
+<div class="card table-card mb-4">
+  <div class="card-header">ربحية الرحلات</div>
+  <table class="table table-hover mb-0">
+    <thead><tr><th>الرحلة</th><th>الإيرادات</th><th>المحصل</th><th>المصروفات</th><th>صافي الربح</th><th>حجوزات</th></tr></thead>
+    <tbody>
+      <% profitability.forEach(p => { %>
+        <tr>
+          <td><%= p.trip.name %></td>
+          <td><%= formatCurrency(p.grossRevenue) %></td>
+          <td><%= formatCurrency(p.collectedRevenue) %></td>
+          <td><%= formatCurrency(p.totalExpenses) %></td>
+          <td><%= formatCurrency(p.netProfit) %></td>
+          <td><%= p.reservationCount %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<div class="card table-card">
+  <div class="card-header">المبيعات حسب الموظف</div>
+  <table class="table table-hover mb-0">
+    <thead><tr><th>الموظف</th><th>عدد الحجوزات</th><th>إجمالي المبيعات</th></tr></thead>
+    <tbody>
+      <% salesData.forEach(s => { %>
+        <tr><td><%= s.employee?.name || '—' %></td><td><%= s.count %></td><td><%= formatCurrency(s.total) %></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

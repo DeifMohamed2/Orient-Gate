@@ -1,0 +1,250 @@
+<%- include('../partials/page-header', {
+  pageTitle: 'استمارة حجز',
+  pageSubtitle: 'إستمارة حجز — أورينت جيت للسياحة',
+  pageActionsHtml: '<a href="/reservations" class="btn btn-outline-primary btn-sm" id="reservationCancelBtn">رجوع</a>'
+}) %>
+
+<form class="card reservation-form needs-validation" method="POST" action="/reservations" id="reservationForm" novalidate
+  data-default-booking-officer="<%= currentUser.name %>"
+  <% if (trip) { %>
+    data-trip-start="<%= new Date(trip.startDate).toISOString().split('T')[0] %>"
+    data-trip-end="<%= new Date(trip.endDate).toISOString().split('T')[0] %>"
+  <% } %>
+>
+  <div class="card-body">
+    <div class="draft-restore-banner alert alert-info d-none" id="draftRestoreBanner" role="status">
+      <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <span><i class="fa-solid fa-cloud-arrow-down me-2"></i>تم استعادة مسودة الحجز المحفوظة</span>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="discardDraftBtn">مسح المسودة</button>
+      </div>
+    </div>
+    <% if (sessionDraft && sessionDraft.body) { %>
+    <script type="application/json" id="reservationSessionDraft"><%- JSON.stringify(sessionDraft.body) %></script>
+    <% } %>
+    <div class="form-section">
+      <h3 class="form-section-title"><i class="fa-solid fa-clipboard-list me-2 text-primary"></i>بيانات الحجز</h3>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">الرحلة <span class="text-danger">*</span></label>
+          <select name="tripId" id="tripSelect" class="form-select" required>
+            <option value="">اختر الرحلة</option>
+            <% trips.forEach(t => { %>
+              <option value="<%= t._id %>" <%= trip && String(trip._id) === String(t._id) ? 'selected' : '' %>><%= t.name %> — <%= formatDate(t.startDate) %></option>
+            <% }) %>
+          </select>
+          <div class="invalid-feedback">يرجى اختيار الرحلة</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">نوع المجموعة</label>
+          <select name="groupType" id="groupTypeSelect" class="form-select">
+            <option value="family">عائلة</option>
+            <option value="solo">فردي</option>
+            <option value="broker">سمسار</option>
+          </select>
+        </div>
+        <div class="col-md-4 d-none" id="brokerSelectWrap">
+          <label class="form-label">السمسار</label>
+          <select name="brokerId" id="brokerSelect" class="form-select">
+            <option value="">— اختر سمسار —</option>
+            <% (brokers || []).forEach(b => { %>
+              <option value="<%= b._id %>"><%= b.name %><%= b.company ? ' — ' + b.company : '' %></option>
+            <% }) %>
+          </select>
+          <div class="invalid-feedback">يرجى اختيار سمسار أو إدخال سمسار جديد</div>
+        </div>
+        <div class="col-md-4 d-none" id="newBrokerWrap">
+          <label class="form-label">سمسار جديد <span class="text-danger" id="newBrokerNameRequired">*</span></label>
+          <input class="form-control" name="newBrokerName" id="newBrokerName" placeholder="اسم السمسار">
+          <div class="invalid-feedback">اسم السمسار مطلوب</div>
+        </div>
+        <div class="col-md-4 d-none" id="newBrokerPhoneWrap">
+          <label class="form-label">هاتف السمسار <span class="text-danger" id="newBrokerPhoneRequired">*</span></label>
+          <input class="form-control" name="newBrokerPhone" id="newBrokerPhone" placeholder="01xxxxxxxxx" pattern="01[0-9]{9}" inputmode="numeric">
+          <div class="invalid-feedback">رقم هاتف مصري صالح مطلوب (11 رقم يبدأ بـ 01)</div>
+        </div>
+        <div class="col-md-4" id="primaryCustomerWrap">
+          <label class="form-label">اسم العميل <span class="text-danger" id="primaryCustomerNameRequired">*</span></label>
+          <input type="hidden" name="primaryCustomerId" id="primaryCustomerIdInput" value="<%= prefillCustomer?._id || '' %>">
+          <input class="form-control" name="primaryCustomerName" required placeholder="اسم العميل الرئيسي" value="<%= prefillCustomer?.name || '' %>">
+          <div class="invalid-feedback">اسم العميل مطلوب</div>
+        </div>
+        <div class="col-md-4" id="primaryPhoneWrap">
+          <label class="form-label">رقم التليفون <span class="text-danger" id="primaryPhoneRequired">*</span></label>
+          <input class="form-control" name="primaryPhone" required placeholder="01xxxxxxxxx" pattern="01[0-9]{9}" inputmode="numeric" value="<%= (prefillCustomer?.phones && prefillCustomer.phones[0]) || '' %>">
+          <div class="invalid-feedback">رقم هاتف مصري صالح مطلوب (11 رقم يبدأ بـ 01)</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">مسئول الحجز</label>
+          <input class="form-control" name="bookingOfficer" id="bookingOfficerInput" placeholder="اسم مسئول الحجز" value="<%= currentUser.name %>">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">مسؤول المبيعات</label>
+          <% if (typeof canAssignSales !== 'undefined' && canAssignSales && salesUsers && salesUsers.length) { %>
+            <select name="salesEmployeeId" class="form-select">
+              <% salesUsers.forEach(s => { %>
+                <option value="<%= s._id %>" <%= String(currentUser._id) === String(s._id) ? 'selected' : '' %>>
+                  <%= s.name %> — <%= roleLabel(s.role) %>
+                </option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <input type="hidden" name="salesEmployeeId" value="<%= currentUser._id %>">
+            <input class="form-control" value="<%= currentUser.name %>" readonly disabled>
+            <div class="form-text">سيتم تسجيل الحجز باسمك تلقائياً</div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section" id="accommodationSection">
+      <h3 class="form-section-title"><i class="fa-solid fa-hotel me-2 text-primary"></i>باقة الإقامة</h3>
+      <p class="text-muted small mb-3">اختر باقة النجوم — تتضمن فنادق مكة والمدينة معاً. السعر يُحسب حسب فئة الباقة ونوع الغرفة لكل معتمر.</p>
+      <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label">الباقة <span class="text-danger">*</span></label>
+          <select name="packageStars" id="packageStarsSelect" class="form-select" required>
+            <option value="">اختر الرحلة أولاً</option>
+          </select>
+          <div class="invalid-feedback">يرجى اختيار باقة الإقامة</div>
+        </div>
+        <div class="col-md-7">
+          <div id="packagePricingHint" class="text-muted small"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section-title"><i class="fa-solid fa-users me-2 text-primary"></i>المعتمرين</h3>
+      <p class="text-muted small mb-3">لكل معتمر اختر نوع الغرفة وحدد الخدمات. في عمود <strong>ربط</strong> اختر الغرفة — يمكن إنشاء عدة غرف مستقلة (مثلاً 3 مجموعات رباعية). السعة تُحسب حسب نوع الغرفة: فردي 1، دبل 2، ثلاثي 3، رباعي 4.</p>
+      <div class="member-table member-table--extended">
+        <div class="member-table-header member-table-header--extended">
+          <span>#</span>
+          <span>الاسم</span>
+          <span>الفئة</span>
+          <span>الجنس</span>
+          <span>جواز</span>
+          <span>نوع الغرفة</span>
+          <span>ربط</span>
+          <span></span>
+        </div>
+        <div id="membersContainer">
+          <div class="member-row member-row--extended" data-member-index="0">
+            <div class="member-row-num">1</div>
+            <div class="member-row-field member-row-field--name">
+              <input class="form-control member-name" name="members[0][name]" placeholder="الاسم" required value="<%= prefillCustomer?.name || '' %>">
+            </div>
+            <div class="member-row-field">
+              <select class="form-select form-select-sm member-type" name="members[0][type]">
+                <option value="adult">بالغ</option>
+                <option value="child_bed">طفل سرير</option>
+                <option value="child_no_bed">طفل بدون</option>
+                <option value="infant">رضيع</option>
+              </select>
+            </div>
+            <div class="member-row-field">
+              <select class="form-select form-select-sm member-gender" name="members[0][gender]">
+                <option value="male" <%= prefillCustomer?.gender === 'male' || !prefillCustomer?.gender ? 'selected' : '' %>>ذكر</option>
+                <option value="female" <%= prefillCustomer?.gender === 'female' ? 'selected' : '' %>>أنثى</option>
+              </select>
+            </div>
+            <div class="member-row-field">
+              <input class="form-control form-control-sm" name="members[0][passport]" placeholder="جواز" value="<%= prefillCustomer?.passport || '' %>">
+            </div>
+            <div class="member-row-field">
+              <select class="form-select form-select-sm member-room-type" name="members[0][roomType]" required>
+                <option value="quad">رباعي</option>
+                <option value="triple">ثلاثي</option>
+                <option value="double">دبل (ثنائي)</option>
+                <option value="single">فردي</option>
+              </select>
+            </div>
+            <div class="member-row-field member-row-field--link">
+              <input type="hidden" name="members[0][roomGroupId]" class="member-room-group" value="room-0">
+              <input type="hidden" name="members[0][linkedManually]" class="member-linked" value="false">
+              <div class="room-assignment-control">
+                <select class="form-select form-select-sm member-room-target" aria-label="تخصيص الغرفة"></select>
+                <span class="room-capacity-pill"></span>
+              </div>
+            </div>
+            <div class="member-row-actions">
+              <button type="button" class="btn btn-icon btn-icon--danger member-remove-btn" disabled><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn btn-outline-primary btn-sm mt-3" id="addMemberBtn">
+        <i class="fa-solid fa-plus me-1"></i> إضافة معتمر
+      </button>
+    </div>
+
+    <div class="form-section<%= (trip && ((trip.pricing?.vipItems?.length) || (trip.pricing?.vipPackagePrice > 0))) ? '' : ' d-none' %>" id="vipAddonsSection">
+      <h3 class="form-section-title"><i class="fa-solid fa-star me-2 text-primary"></i>خدمات VIP (إضافات)</h3>
+      <p class="text-muted small" id="vipAddonsHint">في صف كل معتمر أعلاه: فعّل الخدمة ثم اختر <strong>شخصي</strong> (لمعتمر واحد) أو <strong>للغرفة</strong> (مرة واحدة لكل المرتبطين في نفس الغرفة).</p>
+      <div class="vip-catalog-grid" id="vipCatalogCards"></div>
+      <div class="vip-assignment-summary d-none" id="vipAssignmentSummary">
+        <div class="vip-assignment-summary__title"><i class="fa-solid fa-list-check me-1"></i> ملخص الإضافات المحددة</div>
+        <ul class="vip-assignment-summary__list" id="vipAssignmentList"></ul>
+      </div>
+      <p class="text-muted small mb-0 d-none" id="vipAddonsEmpty">لا توجد خدمات VIP متاحة لهذه الرحلة.</p>
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section-title"><i class="fa-solid fa-coins me-2 text-primary"></i>المالية</h3>
+      <div class="finance-panel card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label" for="discountInput">خصم</label>
+              <div class="finance-amount-field">
+                <input type="number" class="form-control finance-amount-input" name="discount" value="0" id="discountInput" min="0" step="1" inputmode="numeric">
+                <span class="finance-amount-suffix">ج.م.</span>
+              </div>
+              <div class="invalid-feedback">الخصم غير صالح</div>
+              <div class="form-text">يُخصم من المجموع الفرعي قبل الإجمالي</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="paidInput">المدفوع</label>
+              <div class="finance-amount-field">
+                <input type="number" class="form-control finance-amount-input" name="paidAmount" value="0" id="paidInput" min="0" step="1" inputmode="numeric">
+                <span class="finance-amount-suffix">ج.م.</span>
+              </div>
+              <div class="invalid-feedback" id="paidInputFeedback">المبلغ المدفوع يتجاوز الإجمالي</div>
+              <div class="form-text" id="paidInputHint">لا يمكن أن يتجاوز إجمالي الحجز</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label d-block">إجراءات سريعة</label>
+              <div class="finance-quick-actions" role="group" aria-label="إجراءات الدفع السريع">
+                <button type="button" class="btn btn-outline-secondary btn-sm finance-quick-btn" data-paid-action="zero">بدون دفع</button>
+                <button type="button" class="btn btn-outline-primary btn-sm finance-quick-btn" data-paid-action="full">دفع كامل</button>
+              </div>
+              <div class="finance-due-line mt-2" id="financeDueLine" hidden>
+                <span class="finance-due-label">الإجمالي المستحق</span>
+                <strong class="finance-due-value" id="financeDueValue">0 ج.م.</strong>
+              </div>
+            </div>
+          </div>
+          <div class="finance-alert alert alert-danger d-none mt-3" id="financeAlert" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-2"></i>
+            <span id="financeAlertText"></span>
+          </div>
+        </div>
+      </div>
+      <div class="pricing-preview" id="pricingPreview"></div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">ملاحظات</label>
+      <textarea name="notes" class="form-control" rows="3" placeholder="ملاحظات إضافية..."></textarea>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-between reservation-form-actions flex-wrap">
+      <button type="button" class="btn btn-outline-secondary" id="cancelFormBtn"><i class="fa-solid fa-xmark me-1"></i> إلغاء</button>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary" id="previewBtn"><i class="fa-solid fa-rotate me-1"></i> تحديث السعر</button>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-1"></i> تأكيد الحجز</button>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script src="/js/reservation-form.js"></script>

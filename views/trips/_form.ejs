@@ -1,0 +1,684 @@
+<% 
+  const t = trip || {};
+  const p = t.pricing || {};
+  const flights = typeof resolveFlightLegs === 'function' ? resolveFlightLegs(t) : { outbound: {}, return: {} };
+  const outbound = flights.outbound || {};
+  const returnLeg = flights.return || {};
+  const fmtLegDate = (d) => d ? new Date(d).toISOString().split('T')[0] : '';
+  const supervisorIdVal = t.supervisorId?._id || t.supervisorId || '';
+  const assistantSupervisorIdVal = t.assistantSupervisorId?._id || t.assistantSupervisorId || '';
+  const supervisorsList = typeof supervisors !== 'undefined' ? supervisors : [];
+  const isEditMode = typeof isEdit !== 'undefined' && isEdit;
+  const defaultHotels = [
+    { name: '', city: 'mecca', stars: '5', nights: 4 },
+    { name: '', city: 'medina', stars: '5', nights: 3 },
+  ];
+  const groupHotelsIntoPackages = (list) => {
+    const map = {};
+    list.forEach((h) => {
+      const s = h.stars || '4';
+      if (!map[s]) map[s] = [];
+      map[s].push(h);
+    });
+    return Object.keys(map).map((stars) => ({ stars, hotels: map[stars] }));
+  };
+  const existingHotelsList = isEditMode && typeof formHotels !== 'undefined' && formHotels.length ? formHotels : [];
+  const hotelsList = isEditMode
+    ? []
+    : (typeof formHotels !== 'undefined' && formHotels.length ? formHotels : defaultHotels);
+  const draftHotelsList = isEditMode && typeof draftFormHotels !== 'undefined' && draftFormHotels.length
+    ? draftFormHotels
+    : [];
+  const newTripPackages = isEditMode
+    ? groupHotelsIntoPackages(draftHotelsList)
+    : groupHotelsIntoPackages(hotelsList.length ? hotelsList : defaultHotels);
+  const starTiers = ['economy','3','4','5'];
+  const starTierLabels = { economy: 'اقتصادي', '3': '3 نجوم', '4': '4 نجوم', '5': '5 نجوم' };
+  const srp = p.starRoomPrices || {};
+  const childDiscounts = p.childDiscounts || {};
+  const tc = t.costs || (typeof defaultCosts !== 'undefined' ? defaultCosts : {});
+  const hnc = tc.hotelNightCosts || {};
+  const costHotelsList = (typeof costHotels !== 'undefined' && costHotels.length)
+    ? costHotels
+    : hotelsList.map((h, i) => ({ ...h, costKey: String(i) }));
+  const vipItemsList = (p.vipItems && p.vipItems.length)
+    ? p.vipItems
+    : (p.vipPackagePrice > 0 ? [{ name: 'باقة VIP', cost: 0, sellingPrice: p.vipPackagePrice }] : []);
+  const catalog = typeof vipCatalog !== 'undefined' ? vipCatalog : [];
+  const formAction = typeof formActionUrl !== 'undefined' ? formActionUrl : '/trips';
+  const formMethod = typeof formMethodOverride !== 'undefined' && formMethodOverride ? 'POST' : 'POST';
+%>
+<form class="trip-builder-form" method="<%= formMethod %>" action="<%= formAction %>" id="tripBuilderForm" data-edit-mode="<%= isEditMode ? '1' : '0' %>"<% if (isEditMode && t._id) { %> data-trip-id="<%= t._id %>"<% } %>>
+  <% if (typeof formMethodOverride !== 'undefined' && formMethodOverride) { %>
+    <input type="hidden" name="_method" value="<%= formMethodOverride %>">
+  <% } %>
+
+  <div class="draft-restore-banner alert alert-info d-none" id="tripDraftRestoreBanner" role="status">
+    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+      <span><i class="fa-solid fa-cloud-arrow-down me-2"></i>يوجد مسودة محفوظة للنموذج</span>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-primary" id="restoreTripDraftBtn">استعادة المسودة</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="discardTripDraftBtn">مسح المسودة</button>
+      </div>
+    </div>
+  </div>
+  <% if (typeof restoreFormDraft !== 'undefined' && restoreFormDraft) { %>
+  <div class="alert alert-warning mb-3" role="status">
+    <i class="fa-solid fa-triangle-exclamation me-2"></i>تمت استعادة بيانات النموذج بعد خطأ في الحفظ — راجع الحقول ثم أعد المحاولة.
+  </div>
+  <% } %>
+
+  <!-- Trip details -->
+  <div class="card trip-form-section mb-4">
+    <div class="card-header"><i class="fa-solid fa-info-circle me-2"></i>بيانات الرحلة</div>
+    <div class="card-body">
+      <h4 class="trip-form-subtitle mb-3"><i class="fa-solid fa-tag me-2 text-primary"></i>معلومات عامة</h4>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">اسم الرحلة <span class="text-danger">*</span></label>
+          <input class="form-control" name="name" required value="<%= t.name || '' %>" placeholder="عمرة يونيو 2026">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">الدولة</label>
+          <input class="form-control" name="country" value="<%= t.country || 'المملكة العربية السعودية' %>">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">تاريخ البداية <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" name="startDate" id="tripStartDate" required value="<%= t.startDate ? new Date(t.startDate).toISOString().split('T')[0] : '' %>">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">تاريخ النهاية <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" name="endDate" id="tripEndDate" required value="<%= t.endDate ? new Date(t.endDate).toISOString().split('T')[0] : '' %>">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">الأيام <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" name="durationDays" id="tripDurationDays" required min="1" value="<%= t.durationDays || '' %>">
+          <div class="form-text">يُحسب تلقائياً</div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">الليالي <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" name="durationNights" id="tripDurationNights" required min="0" value="<%= t.durationNights || '' %>">
+          <div class="form-text">يُحسب تلقائياً</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">مسار السفر (للبرنامج)</label>
+          <input class="form-control" name="travelRoute" value="<%= t.travelRoute || '' %>" placeholder="القاهرة / جدة / القاهرة">
+          <div class="form-text">يُستخدم في PDF البرنامج التفصيلي</div>
+        </div>
+        <% if (typeof isEdit !== 'undefined' && isEdit) { %>
+        <div class="col-md-4">
+          <label class="form-label">الحالة</label>
+          <select name="status" class="form-select">
+            <% ['active','completed','cancelled'].forEach(s => { %>
+              <option value="<%= s %>" <%= t.status === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+            <% }) %>
+          </select>
+        </div>
+        <% } %>
+      </div>
+
+      <h4 class="trip-form-subtitle mb-3"><i class="fa-solid fa-plane me-2 text-primary"></i>الخطوط / الشركة</h4>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label">الخطوط / الشركة</label>
+          <input class="form-control" name="airline" id="tripAirline" value="<%= t.airline || outbound.airline || '' %>" placeholder="مصر للطيران / Nile Air">
+          <div class="form-text">نفس الشركة لرحلة الذهاب والعودة</div>
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle mb-3"><i class="fa-solid fa-plane-departure me-2 text-primary"></i>رحلة الذهاب — من بلد المنشأ إلى المملكة</h4>
+      <div class="trip-flight-leg-card mb-4">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">مطار المغادرة</label>
+            <input class="form-control" name="outboundFlight[departureAirport]" value="<%= outbound.departureAirport || '' %>" placeholder="القاهرة (CAI)">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">مطار الوصول</label>
+            <input class="form-control" name="outboundFlight[arrivalAirport]" value="<%= outbound.arrivalAirport || '' %>" placeholder="جدة (JED)">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">رقم الرحلة</label>
+            <input class="form-control" name="outboundFlight[flightNumber]" value="<%= outbound.flightNumber || '' %>" placeholder="NP 227">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">تاريخ السفر</label>
+            <input type="date" class="form-control" name="outboundFlight[departureDate]" value="<%= fmtLegDate(outbound.departureDate) %>">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">وقت المغادرة</label>
+            <input class="form-control" name="outboundFlight[departureTime]" value="<%= outbound.departureTime || '' %>" placeholder="04:40">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">وقت الوصول</label>
+            <input class="form-control" name="outboundFlight[arrivalTime]" value="<%= outbound.arrivalTime || '' %>" placeholder="07:55">
+          </div>
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle mb-3"><i class="fa-solid fa-plane-arrival me-2 text-primary"></i>رحلة العودة — من المملكة إلى بلد المنشأ</h4>
+      <div class="trip-flight-leg-card mb-4">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">مطار المغادرة</label>
+            <input class="form-control" name="returnFlight[departureAirport]" value="<%= returnLeg.departureAirport || '' %>" placeholder="جدة (JED)">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">مطار الوصول</label>
+            <input class="form-control" name="returnFlight[arrivalAirport]" value="<%= returnLeg.arrivalAirport || '' %>" placeholder="القاهرة (CAI)">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">رقم الرحلة</label>
+            <input class="form-control" name="returnFlight[flightNumber]" value="<%= returnLeg.flightNumber || '' %>" placeholder="SV 528">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">تاريخ السفر</label>
+            <input type="date" class="form-control" name="returnFlight[departureDate]" value="<%= fmtLegDate(returnLeg.departureDate) %>">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">وقت المغادرة</label>
+            <input class="form-control" name="returnFlight[departureTime]" value="<%= returnLeg.departureTime || '' %>" placeholder="00:30">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">وقت الوصول</label>
+            <input class="form-control" name="returnFlight[arrivalTime]" value="<%= returnLeg.arrivalTime || '' %>" placeholder="01:45">
+          </div>
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle mb-3"><i class="fa-solid fa-users me-2 text-primary"></i>التجمع والمرافقة</h4>
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <label class="form-label">وقت التجمع</label>
+          <input class="form-control" name="gatheringTime" value="<%= t.gatheringTime || '' %>" placeholder="11:00 م">
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">مكان التجمع</label>
+          <input class="form-control" name="gatheringLocation" value="<%= t.gatheringLocation || '' %>" placeholder="مطار القاهرة — صالة 2">
+        </div>
+      </div>
+
+      <div class="supervisor-assignment-block mb-4">
+        <h5 class="supervisor-assignment-title">مشرف الرحلة</h5>
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">اختر مشرف</label>
+            <select name="supervisorId" id="supervisorSelect" class="form-select">
+              <option value="">— اختر مشرف أو أضف جديد —</option>
+              <% supervisorsList.forEach(s => { %>
+                <option value="<%= s._id %>" <%= String(supervisorIdVal) === String(s._id) ? 'selected' : '' %>><%= s.name %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="row g-3 mt-2 d-none" id="newSupervisorWrap">
+          <div class="col-md-4">
+            <label class="form-label">مشرف جديد — الاسم</label>
+            <input class="form-control" name="newSupervisorName" id="newSupervisorName" placeholder="أ / أحمد أكرم">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">هاتف مصر</label>
+            <input class="form-control" name="newSupervisorPhoneEg" id="newSupervisorPhoneEg" placeholder="01xxxxxxxxx">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">هاتف السعودية</label>
+            <input class="form-control" name="newSupervisorPhoneSa" id="newSupervisorPhoneSa" placeholder="05xxxxxxxx">
+          </div>
+        </div>
+      </div>
+
+      <div class="supervisor-assignment-block mb-4">
+        <h5 class="supervisor-assignment-title">مساعد المشرف <span class="text-muted small">(اختياري)</span></h5>
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">اختر مساعد مشرف</label>
+            <select name="assistantSupervisorId" id="assistantSupervisorSelect" class="form-select">
+              <option value="">— بدون مساعد —</option>
+              <option value="__new__" <%= !assistantSupervisorIdVal ? '' : '' %>>+ إضافة مساعد جديد</option>
+              <% supervisorsList.forEach(s => { %>
+                <option value="<%= s._id %>" <%= String(assistantSupervisorIdVal) === String(s._id) ? 'selected' : '' %>><%= s.name %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="row g-3 mt-2 d-none" id="newAssistantSupervisorWrap">
+          <div class="col-md-4">
+            <label class="form-label">مساعد جديد — الاسم</label>
+            <input class="form-control" name="newAssistantSupervisorName" id="newAssistantSupervisorName" placeholder="اسم المساعد">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">هاتف مصر</label>
+            <input class="form-control" name="newAssistantSupervisorPhoneEg" placeholder="01xxxxxxxxx">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">هاتف السعودية</label>
+            <input class="form-control" name="newAssistantSupervisorPhoneSa" placeholder="05xxxxxxxx">
+          </div>
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle mb-3"><i class="fa-solid fa-file-lines me-2 text-primary"></i>تنبيهات البرنامج (للـ PDF)</h4>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">سياسة الأمتعة</label>
+          <textarea class="form-control" name="baggageNotes" rows="3" placeholder="20 كجم شنطة + 7 كجم حقيبة يد. ماء زمزم وفق تعليمات الطيران..."><%= t.baggageNotes || '' %></textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">تنبيه هام / ملاحظات قانونية</label>
+          <textarea class="form-control" name="importantNotices" rows="3" placeholder="تصاريح السفر، التجنيد، مسؤولية المعتمر عن أوراقه..."><%= t.importantNotices || '' %></textarea>
+        </div>
+        <div class="col-md-12">
+          <label class="form-label">ملاحظات عامة</label>
+          <textarea class="form-control" name="notes" rows="2"><%= t.notes || '' %></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hotel packages -->
+  <div class="card trip-form-section mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span><i class="fa-solid fa-layer-group me-2"></i>باقات الإقامة</span>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="addPackageBtn"><i class="fa-solid fa-plus me-1"></i> إضافة باقة</button>
+    </div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">كل باقة = فئة نجوم واحدة (مثلاً 5 نجوم في مكة + 5 نجوم في المدينة). التسعير في قسم «سعر الباقة الكامل» أدناه — سطر لكل فئة نجوم.</p>
+      <% if (isEditMode && existingHotelsList.length) { %>
+      <div class="existing-hotels-summary mb-4">
+        <h4 class="trip-form-subtitle mb-3">الباقات الحالية</h4>
+        <p class="text-muted small mb-3">لتعديل الغرف المحجوزة استخدم صفحة الإقامة. يمكنك إضافة باقات جديدة أدناه.</p>
+        <% groupHotelsIntoPackages(existingHotelsList).forEach((pkg) => { %>
+        <div class="hotel-package-block hotel-package-block--readonly mb-3">
+          <div class="hotel-package-head">
+            <strong><%= starTierLabels[pkg.stars] || pkg.stars %> باقة</strong>
+          </div>
+          <% pkg.hotels.forEach((hotel) => { %>
+          <div class="hotel-block hotel-block-readonly mb-2">
+            <div class="hotel-block-head">
+              <span class="hotel-block-title"><%= hotel.name || cityLabel(hotel.city) %></span>
+              <span class="badge badge-secondary"><%= cityLabel(hotel.city) %></span>
+            </div>
+            <div class="row g-2 small text-muted">
+              <div class="col-md-3"><strong>الليالي:</strong> <%= hotel.nights || 0 %></div>
+              <div class="col-md-3"><strong>دخول:</strong> <%= hotel.checkInDate ? new Date(hotel.checkInDate).toLocaleDateString('ar-EG') : '—' %></div>
+              <div class="col-md-3"><strong>خروج:</strong> <%= hotel.checkOutDate ? new Date(hotel.checkOutDate).toLocaleDateString('ar-EG') : '—' %></div>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+        <% }) %>
+        <a href="/trips/<%= t._id %>?tab=accommodation" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-bed me-1"></i> إدارة الإقامة</a>
+      </div>
+      <h4 class="trip-form-subtitle mb-3">إضافة باقات جديدة</h4>
+      <% } %>
+      <div id="packagesContainer">
+        <% newTripPackages.forEach((pkg, pi) => { %>
+        <div class="hotel-package-block" data-package-index="<%= pi %>">
+          <div class="hotel-package-head d-flex flex-wrap align-items-center gap-2 mb-3">
+            <span class="hotel-package-title">باقة</span>
+            <select class="form-select form-select-sm package-stars" style="max-width:140px;">
+              <% HOTEL_STARS.forEach(s => { %>
+                <option value="<%= s %>" <%= pkg.stars === s ? 'selected' : '' %>><%= s === 'economy' ? 'اقتصادي' : s + ' نجوم' %></option>
+              <% }) %>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-primary add-hotel-to-package-btn"><i class="fa-solid fa-plus me-1"></i> فندق</button>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-package-btn ms-auto" title="حذف الباقة"><i class="fa-solid fa-trash"></i></button>
+          </div>
+          <div class="package-hotels">
+            <% pkg.hotels.forEach((hotel, hi) => { %>
+            <div class="hotel-block" data-hotel-index="<%= hi %>">
+              <div class="hotel-block-head">
+                <span class="hotel-block-title">فندق <%= hi + 1 %></span>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-hotel-btn" title="حذف"><i class="fa-solid fa-trash"></i></button>
+              </div>
+              <input type="hidden" class="hotel-stars-sync" name="hotels[<%= pi * 10 + hi %>][stars]" value="<%= pkg.stars %>">
+              <div class="row g-2 mb-3">
+                <div class="col-md-4"><label class="form-label">اسم الفندق</label>
+                  <input class="form-control hotel-name" name="hotels[<%= pi * 10 + hi %>][name]" value="<%= hotel.name || '' %>" placeholder="اسم الفندق"></div>
+                <div class="col-md-3"><label class="form-label">المدينة</label>
+                  <select class="form-select hotel-city" name="hotels[<%= pi * 10 + hi %>][city]">
+                    <% CITIES.forEach(c => { %><option value="<%= c %>" <%= hotel.city === c ? 'selected' : '' %>><%= cityLabel(c) %></option><% }) %>
+                  </select></div>
+                <div class="col-md-3"><label class="form-label">الليالي</label>
+                  <input type="number" class="form-control hotel-nights" name="hotels[<%= pi * 10 + hi %>][nights]" min="0" value="<%= hotel.nights || '' %>"></div>
+                <div class="col-md-3"><label class="form-label">دخول</label>
+                  <input type="date" class="form-control hotel-checkin" name="hotels[<%= pi * 10 + hi %>][checkInDate]" value="<%= hotel.checkInDate ? new Date(hotel.checkInDate).toISOString().split('T')[0] : '' %>"></div>
+                <div class="col-md-3"><label class="form-label">خروج</label>
+                  <input type="date" class="form-control hotel-checkout" name="hotels[<%= pi * 10 + hi %>][checkOutDate]" value="<%= hotel.checkOutDate ? new Date(hotel.checkOutDate).toISOString().split('T')[0] : '' %>"></div>
+              </div>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div class="card trip-form-section mb-4">
+    <div class="card-header"><i class="fa-solid fa-tags me-2"></i>التسعير — سعر الباقة الكامل</div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">حدد سعر الرحلة الكامل لكل فئة نجوم ونوع غرفة. الطيران والتأشيرة متساوية للجميع؛ الفندق هو ما يحدد الفرق بين الفئات.</p>
+
+      <h4 class="trip-form-subtitle">أسعار الباقة حسب النجوم ونوع الغرفة (ج.م.)</h4>
+      <div class="pricing-matrix-row row g-4 mb-4">
+        <div class="col-lg-7">
+          <div class="star-room-matrix-wrap">
+            <table class="table table-sm star-room-matrix mb-0">
+              <thead>
+                <tr>
+                  <th>الفئة</th>
+                  <% ROOM_TYPES.forEach(rt => { %><th><%= roomTypeLabel(rt) %></th><% }) %>
+                </tr>
+              </thead>
+              <tbody>
+                <% starTiers.forEach(st => { %>
+                <tr>
+                  <td class="star-tier-label"><%= starTierLabels[st] %></td>
+                  <% ROOM_TYPES.forEach(rt => { %>
+                  <td>
+                    <input type="number" class="form-control form-control-sm star-room-price"
+                      name="pricing[starRoomPrices][<%= st %>][<%= rt %>]" min="0"
+                      value="<%= (srp[st] && srp[st][rt]) || 0 %>"
+                      data-star="<%= st %>" data-room="<%= rt %>"
+                      placeholder="0">
+                  </td>
+                  <% }) %>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="trip-price-preview trip-price-preview-inline" id="tripPricePreview">
+            <div class="trip-price-preview-label">
+              <i class="fa-solid fa-eye me-1"></i> معاينة الأسعار المحسوبة
+            </div>
+            <p class="trip-price-preview-hint">بالغ / طفل مع سرير / رضيع — تتحدث تلقائياً عند تعديل الأسعار</p>
+            <div class="trip-price-preview-matrix" id="packagePricePreview"></div>
+          </div>
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle">خصم الأطفال والرضع (جنيه — مبلغ ثابت من سعر الباقة)</h4>
+      <p class="text-muted small mb-3">يُخصم هذا المبلغ من سعر البالغ — وليس نسبة مئوية.</p>
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label class="form-label">طفل مع سرير (جنيه)</label>
+          <input type="number" class="form-control child-discount-input" name="pricing[childDiscounts][childWithBed]" min="0" step="1" value="<%= childDiscounts.childWithBed || '' %>" data-child="childWithBed">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">طفل بدون سرير (جنيه)</label>
+          <input type="number" class="form-control child-discount-input" name="pricing[childDiscounts][childWithoutBed]" min="0" step="1" value="<%= childDiscounts.childWithoutBed || '' %>" data-child="childWithoutBed">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">رضيع (جنيه)</label>
+          <input type="number" class="form-control child-discount-input" name="pricing[childDiscounts][infant]" min="0" step="1" value="<%= childDiscounts.infant || '' %>" data-child="infant">
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle">خدمات VIP</h4>
+      <p class="text-muted small mb-3">أضف خدمات VIP متاحة لهذه الرحلة (مثل لموزين). تُحفظ الأسماء الجديدة تلقائياً في القائمة لإعادة الاستخدام لاحقاً.</p>
+      <% if (catalog.length) { %>
+      <datalist id="vipCatalogList">
+        <% catalog.forEach(item => { %>
+          <option value="<%= item.name %>" data-cost="<%= item.defaultCost %>" data-selling="<%= item.defaultSellingPrice %>" data-id="<%= item._id %>"></option>
+        <% }) %>
+      </datalist>
+      <% } %>
+      <div class="table-responsive mb-3">
+        <table class="table table-sm vip-items-table">
+          <thead>
+            <tr>
+              <th style="width:35%">الاسم</th>
+              <th style="width:20%">التكلفة</th>
+              <th style="width:20%">سعر البيع</th>
+              <th style="width:15%"></th>
+            </tr>
+          </thead>
+          <tbody id="vipItemsBody">
+            <% if (vipItemsList.length) { %>
+              <% vipItemsList.forEach((item, i) => { %>
+              <tr class="vip-item-row" data-index="<%= i %>">
+                <td>
+                  <input type="hidden" name="pricing[vipItems][<%= i %>][vipServiceId]" value="<%= item.vipServiceId || '' %>">
+                  <input type="text" class="form-control form-control-sm vip-item-name" name="pricing[vipItems][<%= i %>][name]" value="<%= item.name || '' %>" placeholder="مثال: لموزين" list="vipCatalogList" required>
+                </td>
+                <td><input type="number" class="form-control form-control-sm" name="pricing[vipItems][<%= i %>][cost]" min="0" value="<%= item.cost || 0 %>"></td>
+                <td><input type="number" class="form-control form-control-sm" name="pricing[vipItems][<%= i %>][sellingPrice]" min="0" value="<%= item.sellingPrice || 0 %>"></td>
+                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-vip-item" title="حذف"><i class="fa-solid fa-trash"></i></button></td>
+              </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <% if (catalog.length) { %>
+        <div class="d-flex gap-2 align-items-center">
+          <select class="form-select form-select-sm" id="vipCatalogSelect" style="min-width:180px">
+            <option value="">إضافة من القائمة...</option>
+            <% catalog.forEach(item => { %>
+              <option value="<%= item._id %>" data-name="<%= item.name %>" data-cost="<%= item.defaultCost %>" data-selling="<%= item.defaultSellingPrice %>"><%= item.name %></option>
+            <% }) %>
+          </select>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="addVipFromCatalogBtn"><i class="fa-solid fa-list me-1"></i>إضافة من القائمة</button>
+        </div>
+        <% } %>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="addVipItemBtn"><i class="fa-solid fa-plus me-1"></i>إضافة خدمة جديدة</button>
+      </div>
+      <% if (catalog.length) { %>
+      <details class="mb-4">
+        <summary class="text-muted small" style="cursor:pointer">الخدمات المحفوظة في النظام (<%= catalog.length %>)</summary>
+        <div class="d-flex flex-wrap gap-2 mt-2">
+          <% catalog.forEach(item => { %>
+            <span class="badge bg-light text-dark border"><%= item.name %> — <%= item.defaultSellingPrice %> ج.م.</span>
+          <% }) %>
+        </div>
+      </details>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Trip actual costs (profit tracking) -->
+  <div class="card trip-form-section mb-4">
+    <div class="card-header"><i class="fa-solid fa-calculator me-2"></i>تكاليف الرحلة (فعلية — للربح)</div>
+    <div class="card-body">
+      <p class="text-muted small mb-3">أدخل التكلفة الفعلية على الوكالة — لا تؤثر على سعر البيع للعميل. تُستخدم لحساب الربح عند اكتمال دفع الحجوزات.</p>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <label class="form-label">سعر صرف الريال → جنيه</label>
+          <input type="number" class="form-control" name="costs[sarToEgpRate]" id="costSarToEgpRate" min="0" step="0.01" value="<%= tc.sarToEgpRate || '' %>">
+        </div>
+      </div>
+
+      <div class="visa-cost-box border rounded p-3 mb-4">
+        <h4 class="trip-form-subtitle mb-3"><i class="fa-solid fa-passport me-2"></i>تأشيرة (لكل معتمر)</h4>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">الوكيل السعودي (ريال)</label>
+            <input type="number" class="form-control cost-input visa-cost-field" name="costs[visaSaudiAgentSar]" min="0" step="0.01" value="<%= tc.visaSaudiAgentSar || '' %>">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">بوابة العمرة المصرية (جنيه)</label>
+            <input type="number" class="form-control cost-input visa-cost-field" name="costs[visaEgyptPortalEgp]" min="0" step="0.01" value="<%= tc.visaEgyptPortalEgp || '' %>">
+          </div>
+        </div>
+        <div class="visa-cost-total mt-3 small" id="visaCostTotalPreview">
+          <span class="text-muted">إجمالي تكلفة التأشيرة:</span>
+          <strong id="visaCostTotalValue">—</strong>
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle">تذكرة الطيران (لكل معتمر)</h4>
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label class="form-label">التكلفة (جنيه)</label>
+          <input type="number" class="form-control cost-input" name="costs[flightTicketCostEgp]" min="0" step="0.01" value="<%= tc.flightTicketCostEgp || '' %>">
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle">سكن — تكلفة الليلة للغرفة كاملة (ريال)</h4>
+      <p class="text-muted small mb-3">اختر الفندق من القائمة أدناه (نفس الفنادق المُضافة في قسم الفنادق). كل فندق له تكلفة ليلة مستقلة — يُقسم تلقائياً على عدد الأشخاص حسب نوع الغرفة × ليالي ذلك الفندق.</p>
+      <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+          <div id="hotelCostsContainer">
+            <% if (isEditMode) { %>
+            <% costHotelsList.forEach((hotel, hi) => {
+              const costKey = hotel._id ? String(hotel._id) : String(hi);
+              const tier = hnc[costKey] || {};
+              const hotelLabel = hotel.name || (cityLabel(hotel.city) + ' — ' + (hotel.stars === 'economy' ? 'اقتصادي' : hotel.stars + ' نجوم'));
+            %>
+            <div class="hotel-cost-block border rounded p-3 mb-3" data-cost-key="<%= costKey %>">
+              <div class="hotel-cost-head d-flex flex-wrap align-items-center gap-2 mb-3">
+                <strong class="hotel-cost-title"><%= hotelLabel %></strong>
+                <span class="badge bg-light text-dark border hotel-cost-city"><%= cityLabel(hotel.city) %></span>
+                <span class="text-muted small hotel-cost-nights"><%= hotel.nights || 0 %> ليلة</span>
+              </div>
+              <div class="star-room-matrix-wrap">
+                <table class="table table-sm star-room-matrix mb-0">
+                  <thead>
+                    <tr>
+                      <th>نوع الغرفة</th>
+                      <% ROOM_TYPES.forEach(rt => { %><th><%= roomTypeLabel(rt) %></th><% }) %>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="star-tier-label">تكلفة الليلة (ر.س)</td>
+                      <% ROOM_TYPES.forEach(rt => { %>
+                      <td>
+                        <input type="number" class="form-control form-control-sm cost-night-input hotel-cost-room-input"
+                          name="costs[hotelNightCosts][<%= costKey %>][<%= rt %>]" min="0"
+                          value="<%= tier[rt] || 0 %>"
+                          data-room="<%= rt %>" placeholder="0">
+                      </td>
+                      <% }) %>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <% }) %>
+            <% } %>
+          </div>
+          <p class="text-muted small mb-0" id="hotelCostsEmptyHint" style="<%= (isEditMode && costHotelsList.length) ? 'display:none' : '' %>">
+            <i class="fa-solid fa-info-circle me-1"></i> أضف باقات في قسم «باقات الإقامة» أعلاه لتظهر هنا حقول تكلفة السكن.
+          </p>
+        </div>
+        <div class="col-lg-5">
+          <div class="trip-cost-preview" id="tripCostPreview">
+            <div class="trip-cost-preview-header">
+              <div class="trip-cost-preview-title">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>معاينة التكلفة</span>
+              </div>
+              <span class="trip-cost-preview-badge">رباعي — مثال</span>
+            </div>
+            <p class="trip-cost-preview-hint">تكلفة المعتمر في الرباعي لكل فندق حسب ليالي الإقامة</p>
+            <div id="costPreviewBody" class="trip-cost-preview-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <h4 class="trip-form-subtitle">بدل المشرفين (ريال / يوم)</h4>
+      <div class="row g-3 mb-2">
+        <div class="col-md-3">
+          <label class="form-label">مشرف الرحلة / يوم</label>
+          <input type="number" class="form-control" name="costs[supervisorDailyRateSar]" id="supervisorDailyRateSar" min="0" step="0.01" value="<%= tc.supervisorDailyRateSar || '' %>">
+        </div>
+        <div class="col-md-3" id="assistantDailyRateWrap">
+          <label class="form-label">مساعد المشرف / يوم</label>
+          <input type="number" class="form-control" name="costs[assistantDailyRateSar]" id="assistantDailyRateSar" min="0" step="0.01" value="<%= tc.assistantDailyRateSar || '' %>">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">أيام الرحلة</label>
+          <input type="text" class="form-control" id="costDurationDaysDisplay" readonly value="<%= t.durationDays || '—' %>">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">إجمالي بدل المشرفين (ريال)</label>
+          <input type="text" class="form-control" id="supervisorTotalSarDisplay" readonly>
+        </div>
+      </div>
+      <p class="text-muted small">مصاريف إضافية (شنط، هدايا…) تُسجّل من تبويب المالية للرحلة.</p>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <a href="<%= typeof isEdit !== 'undefined' && isEdit ? '/trips/' + t._id : '/trips' %>" class="btn btn-outline-primary">إلغاء</a>
+    <button class="btn btn-primary btn-lg" type="submit">
+      <i class="fa-solid fa-check me-1"></i>
+      <%= typeof isEdit !== 'undefined' && isEdit ? 'حفظ التعديلات' : 'إنشاء الرحلة' %>
+    </button>
+  </div>
+</form>
+
+<!-- Templates for JS -->
+<template id="packageBlockTemplate">
+  <div class="hotel-package-block" data-package-index="">
+    <div class="hotel-package-head d-flex flex-wrap align-items-center gap-2 mb-3">
+      <span class="hotel-package-title">باقة</span>
+      <select class="form-select form-select-sm package-stars" style="max-width:140px;">
+        <option value="economy">اقتصادي</option>
+        <option value="3">3 نجوم</option>
+        <option value="4">4 نجوم</option>
+        <option value="5" selected>5 نجوم</option>
+      </select>
+      <button type="button" class="btn btn-sm btn-outline-primary add-hotel-to-package-btn"><i class="fa-solid fa-plus me-1"></i> فندق</button>
+      <button type="button" class="btn btn-sm btn-outline-danger remove-package-btn ms-auto" title="حذف الباقة"><i class="fa-solid fa-trash"></i></button>
+    </div>
+    <div class="package-hotels"></div>
+  </div>
+</template>
+
+<template id="hotelBlockTemplate">
+  <div class="hotel-block" data-hotel-index="">
+    <div class="hotel-block-head">
+      <span class="hotel-block-title">فندق</span>
+      <button type="button" class="btn btn-sm btn-outline-danger remove-hotel-btn" title="حذف"><i class="fa-solid fa-trash"></i></button>
+    </div>
+    <input type="hidden" class="hotel-stars-sync" name="" value="5">
+    <div class="row g-2 mb-3">
+      <div class="col-md-4"><label class="form-label">اسم الفندق</label><input class="form-control hotel-name" name="" placeholder="اسم الفندق"></div>
+      <div class="col-md-3"><label class="form-label">المدينة</label>
+        <select class="form-select hotel-city" name="">
+          <option value="mecca">مكة المكرمة</option><option value="medina">المدينة المنورة</option>
+        </select></div>
+      <div class="col-md-3"><label class="form-label">الليالي</label><input type="number" class="form-control hotel-nights" name="" min="0"></div>
+      <div class="col-md-3"><label class="form-label">دخول</label><input type="date" class="form-control hotel-checkin" name=""></div>
+      <div class="col-md-3"><label class="form-label">خروج</label><input type="date" class="form-control hotel-checkout" name=""></div>
+    </div>
+  </div>
+</template>
+
+<template id="hotelCostBlockTemplate">
+  <div class="hotel-cost-block border rounded p-3 mb-3" data-cost-key="" data-hotel-slot="">
+    <div class="hotel-cost-head d-flex flex-wrap align-items-center gap-2 mb-3">
+      <strong class="hotel-cost-title">فندق</strong>
+      <span class="badge bg-light text-dark border hotel-cost-city"></span>
+      <span class="text-muted small hotel-cost-nights"></span>
+    </div>
+    <div class="star-room-matrix-wrap">
+      <table class="table table-sm star-room-matrix mb-0">
+        <thead>
+          <tr>
+            <th>نوع الغرفة</th>
+            <th>فردي</th><th>دبل</th><th>ثلاثي</th><th>رباعي</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="star-tier-label">تكلفة الليلة (ر.س)</td>
+            <td><input type="number" class="form-control form-control-sm cost-night-input hotel-cost-room-input" data-room="single" min="0" placeholder="0"></td>
+            <td><input type="number" class="form-control form-control-sm cost-night-input hotel-cost-room-input" data-room="double" min="0" placeholder="0"></td>
+            <td><input type="number" class="form-control form-control-sm cost-night-input hotel-cost-room-input" data-room="triple" min="0" placeholder="0"></td>
+            <td><input type="number" class="form-control form-control-sm cost-night-input hotel-cost-room-input" data-room="quad" min="0" placeholder="0"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>

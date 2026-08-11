@@ -1,0 +1,169 @@
+<div class="page-header page-header--compact">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">الحجوزات</h1>
+  </div>
+  <div class="page-actions">
+    <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('reservations:create')) { %>
+    <a href="/reservations/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> حجز جديد</a>
+    <% } %>
+  </div>
+</div>
+
+<form class="card reservations-filters" method="GET">
+  <div class="reservations-filters-inner">
+    <div class="reservations-filter-search">
+      <i class="fa-solid fa-magnifying-glass reservations-filter-icon" aria-hidden="true"></i>
+      <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث بالاسم، الهاتف، أو رقم الحجز...">
+    </div>
+    <div class="reservations-filter-field">
+      <select name="tripId" class="form-select">
+        <option value="">كل الرحلات</option>
+        <% trips.forEach(t => { %>
+          <option value="<%= t._id %>" <%= filters.tripId && String(filters.tripId) === String(t._id) ? 'selected' : '' %>><%= t.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="reservations-filter-field">
+      <select name="paymentStatus" class="form-select">
+        <option value="">كل حالات الدفع</option>
+        <% ['unpaid','partial','paid','refunded'].forEach(s => { %>
+          <option value="<%= s %>" <%= filters.paymentStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <% if (typeof canAssignSales !== 'undefined' && canAssignSales && salesUsers && salesUsers.length) { %>
+    <div class="reservations-filter-field">
+      <select name="salesEmployeeId" class="form-select">
+        <option value="">كل مسؤولي المبيعات</option>
+        <% salesUsers.forEach(s => { %>
+          <option value="<%= s._id %>" <%= filters.salesEmployeeId === String(s._id) ? 'selected' : '' %>><%= s.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <% } %>
+    <div class="reservations-filter-field">
+      <select name="status" class="form-select">
+        <option value="">نشط (افتراضي)</option>
+        <option value="all" <%= filters.status === 'all' ? 'selected' : '' %>>كل الحالات</option>
+        <option value="cancelled" <%= filters.status === 'cancelled' ? 'selected' : '' %>>ملغي</option>
+        <option value="completed" <%= filters.status === 'completed' ? 'selected' : '' %>>مكتمل</option>
+      </select>
+    </div>
+    <div class="reservations-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> بحث</button>
+      <% if (hasActiveFilters) { %>
+        <a href="/reservations" class="btn btn-outline-primary">مسح</a>
+      <% } %>
+    </div>
+  </div>
+  <div class="reservations-stats">
+    <span class="trip-rail-count"><%= pagination.totalCount %> نتيجة</span>
+    <span class="text-muted small">•</span>
+    <span class="text-muted small"><%= stats.total %> نشط</span>
+    <span class="text-muted small">•</span>
+    <span class="text-muted small"><%= stats.unpaid %> غير مدفوع</span>
+    <span class="text-muted small">•</span>
+    <span class="text-muted small"><%= stats.today %> اليوم</span>
+  </div>
+</form>
+
+<div class="card table-card reservations-table-card">
+  <% if (reservations.length) { %>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 reservations-table">
+      <thead>
+        <tr>
+          <th>رقم الحجز</th>
+          <th>العميل</th>
+          <th>الهاتف</th>
+          <th>الرحلة</th>
+          <th>مسؤول المبيعات</th>
+          <th>التاريخ</th>
+          <th>المعتمرين</th>
+          <th>الإجمالي</th>
+          <th>الدفع</th>
+          <th>الحالة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% reservations.forEach(r => { %>
+          <tr class="reservations-table-row" data-href="/reservations/<%= r._id %>">
+            <td>
+              <a href="/reservations/<%= r._id %>" class="reservations-link"><%= r.reservationNumber %></a>
+            </td>
+            <td class="fw-semibold"><%= r.primaryCustomerName %></td>
+            <td class="text-muted"><%= r.primaryPhone %></td>
+            <td><%= r.tripId?.name || '—' %></td>
+            <td class="text-muted small">
+              <% if (r.salesEmployee?._id) { %>
+                <% if (typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('customers:view')) { %>
+                <a href="/sales/seller/<%= r.salesEmployee._id %>" class="reservations-link"><%= r.salesEmployee.name %></a>
+                <% } else { %>
+                <%= r.salesEmployee.name %>
+                <% } %>
+              <% } else { %>—<% } %>
+            </td>
+            <td class="text-muted small"><%= formatDate(r.bookingDate) %></td>
+            <td><span class="badge bg-light text-dark"><%= r.members?.length || 0 %></span></td>
+            <td class="fw-semibold"><%= formatCurrency(r.pricingSnapshot?.total) %></td>
+            <td><%- include('../partials/badge', { status: r.paymentStatus }) %></td>
+            <td><%- include('../partials/badge', { status: r.status }) %></td>
+            <td class="reservations-row-actions" onclick="event.stopPropagation()">
+              <a href="/reservations/<%= r._id %>" class="btn btn-icon" title="عرض"><i class="fa-solid fa-eye"></i></a>
+              <% if (r.status === 'active' && typeof currentUser !== 'undefined' && currentUser && currentUser.hasPermission('reservations:edit')) { %>
+                <a href="/reservations/<%= r._id %>/edit" class="btn btn-icon" title="تعديل"><i class="fa-solid fa-pen"></i></a>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% if (pagination.totalPages > 1) { %>
+  <%
+    const pageUrl = (p) => {
+      const q = [];
+      if (filters.search) q.push('search=' + encodeURIComponent(filters.search));
+      if (filters.tripId) q.push('tripId=' + encodeURIComponent(filters.tripId));
+      if (filters.paymentStatus) q.push('paymentStatus=' + encodeURIComponent(filters.paymentStatus));
+      if (filters.salesEmployeeId) q.push('salesEmployeeId=' + encodeURIComponent(filters.salesEmployeeId));
+      if (filters.status) q.push('status=' + encodeURIComponent(filters.status));
+      q.push('page=' + p);
+      return '?' + q.join('&');
+    };
+  %>
+  <div class="card-footer reservations-pagination">
+    <div class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></div>
+    <div class="d-flex gap-2">
+      <% if (pagination.hasPrev) { %>
+        <a class="btn btn-outline-primary btn-sm" href="<%= pageUrl(pagination.page - 1) %>">السابق</a>
+      <% } %>
+      <% if (pagination.hasNext) { %>
+        <a class="btn btn-outline-primary btn-sm" href="<%= pageUrl(pagination.page + 1) %>">التالي</a>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+  <% } else { %>
+  <div class="reservations-empty">
+    <i class="fa-solid fa-calendar-xmark"></i>
+    <% if (hasActiveFilters) { %>
+      <p>لا توجد حجوزات مطابقة للفلاتر المحددة</p>
+      <a href="/reservations" class="btn btn-outline-primary btn-sm">مسح الفلاتر</a>
+    <% } else { %>
+      <p>لا توجد حجوزات بعد</p>
+      <a href="/reservations/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> إنشاء حجز جديد</a>
+    <% } %>
+  </div>
+  <% } %>
+</div>
+
+<script>
+document.querySelectorAll('.reservations-table-row[data-href]').forEach((row) => {
+  row.addEventListener('click', (e) => {
+    if (e.target.closest('a, button')) return;
+    window.location.href = row.dataset.href;
+  });
+});
+</script>

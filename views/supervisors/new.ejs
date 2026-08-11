@@ -1,0 +1,12 @@
+<%- include('../partials/page-header', { pageTitle: 'مشرف جديد', pageSubtitle: 'إضافة مشرف رحلة جديد' }) %>
+<div class="card">
+  <div class="card-body">
+    <form method="POST" action="/supervisors">
+      <%- include('_supervisor-form', { supervisor }) %>
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i> حفظ</button>
+        <a href="/supervisors" class="btn btn-outline-primary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>

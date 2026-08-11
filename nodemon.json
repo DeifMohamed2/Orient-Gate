@@ -1,0 +1,5 @@
+{
+  "watch": ["app.js", "config", "controllers", "middleware", "models", "routes", "services", "utils", "validators", "public"],
+  "ignore": [".cursor/**", "node_modules/**", "school managmnet/**"],
+  "ext": "js,json,ejs"
+}

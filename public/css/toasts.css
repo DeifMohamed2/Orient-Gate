@@ -1,0 +1,164 @@
+/**
+ * Orient Gate — global toast notifications
+ */
+
+.og-toast-host {
+  position: fixed;
+  top: calc(var(--shell-topbar-h, 64px) + 12px);
+  right: 16px;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  width: min(400px, calc(100vw - 24px));
+  pointer-events: none;
+}
+
+.og-auth-body .og-toast-host,
+.auth-body .og-toast-host {
+  top: 16px;
+}
+
+.og-toast {
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 14px 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: og-toast-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.og-toast.is-leaving {
+  animation: og-toast-out 0.22s ease forwards;
+}
+
+.og-toast::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: var(--radius-lg, 12px) 0 0 var(--radius-lg, 12px);
+}
+
+.og-toast--success::before { background: var(--success); }
+.og-toast--error::before { background: var(--danger); }
+.og-toast--warning::before { background: var(--warning); }
+.og-toast--info::before { background: var(--info); }
+
+.og-toast__icon {
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+  font-size: 1.05rem;
+  margin-top: 1px;
+}
+
+.og-toast--success .og-toast__icon { color: var(--success); }
+.og-toast--error .og-toast__icon { color: var(--danger); }
+.og-toast--warning .og-toast__icon { color: var(--warning); }
+.og-toast--info .og-toast__icon { color: var(--info); }
+
+.og-toast__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.og-toast__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-2);
+  margin-bottom: 2px;
+}
+
+.og-toast__message {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-1);
+  word-break: break-word;
+}
+
+.og-toast__close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  padding: 2px 4px;
+  margin: -2px -4px 0 0;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 6px);
+  transition: color 0.15s, background 0.15s;
+}
+
+.og-toast__close:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.og-toast__progress {
+  position: absolute;
+  left: 4px;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--border);
+  transform-origin: left center;
+}
+
+.og-toast__progress-fill {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.og-toast--success .og-toast__progress-fill { background: var(--success); }
+.og-toast--error .og-toast__progress-fill { background: var(--danger); }
+.og-toast--warning .og-toast__progress-fill { background: var(--warning); }
+.og-toast--info .og-toast__progress-fill { background: var(--info); }
+
+.og-toast.is-paused .og-toast__progress-fill {
+  animation-play-state: paused !important;
+}
+
+@keyframes og-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes og-toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 576px) {
+  .og-toast-host {
+    right: 12px;
+    left: 12px;
+    width: auto;
+    align-items: stretch;
+  }
+}

@@ -1,0 +1,75 @@
+<div class="trip-hub-panel">
+  <div class="trip-hub-toolbar">
+    <form class="trip-hub-toolbar__filters" method="GET" action="/trips/<%= trip._id %>">
+      <input type="hidden" name="tab" value="reservations">
+      <div class="dash-hub-filter-search" style="min-width:200px;max-width:320px;">
+        <i class="fa-solid fa-magnifying-glass dash-hub-filter-icon"></i>
+        <input type="search" name="search" class="form-control form-control-sm" value="<%= filters.search || '' %>" placeholder="بحث بالعميل أو رقم الحجز...">
+      </div>
+      <select name="paymentStatus" class="form-select form-select-sm" style="width:auto;min-width:140px;">
+        <option value="">كل حالات الدفع</option>
+        <% ['unpaid','partial','paid','refunded'].forEach(s => { %>
+          <option value="<%= s %>" <%= filters.paymentStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-filter me-1"></i> تصفية</button>
+      <% if (filters.search || filters.paymentStatus) { %>
+        <a href="/trips/<%= trip._id %>?tab=reservations" class="btn btn-outline-primary btn-sm">مسح</a>
+      <% } %>
+    </form>
+    <div class="trip-hub-toolbar__actions">
+      <span class="text-muted small"><%= reservations.length %> حجز</span>
+      <a href="/reservations/new?tripId=<%= trip._id %>" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> حجز جديد</a>
+      <a href="/reservations?tripId=<%= trip._id %>" class="btn btn-outline-primary btn-sm">صفحة الحجوزات</a>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0 trip-hub-table" id="reservationsTable">
+        <thead>
+          <tr>
+            <th>رقم الحجز</th>
+            <th>العميل</th>
+            <th>مسؤول المبيعات</th>
+            <th>التاريخ</th>
+            <th>معتمرين</th>
+            <th>الإجمالي</th>
+            <th>المدفوع</th>
+            <th>المتبقي</th>
+            <th>الدفع</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% reservationFinance.forEach(({ reservation: r, total, paid, balance }) => { %>
+            <tr data-search="<%= r.primaryCustomerName %> <%= r.reservationNumber %>">
+              <td><a href="/reservations/<%= r._id %>" class="fw-semibold"><%= r.reservationNumber %></a></td>
+              <td><%= r.primaryCustomerName %></td>
+              <td class="text-muted small">
+                <% if (r.salesEmployee?._id) { %>
+                  <a href="/sales/seller/<%= r.salesEmployee._id %>"><%= r.salesEmployee.name %></a>
+                <% } else { %>—<% } %>
+              </td>
+              <td><%= formatDate(r.bookingDate) %></td>
+              <td><%= r.members?.length || 0 %></td>
+              <td><%= formatCurrency(total) %></td>
+              <td><%= formatCurrency(paid) %></td>
+              <td class="<%= balance > 0 ? 'text-danger fw-semibold' : '' %>"><%= formatCurrency(balance) %></td>
+              <td><%- include('../../partials/badge', { status: r.paymentStatus }) %></td>
+              <td>
+                <a href="/reservations/<%= r._id %>" class="btn btn-icon btn-sm" title="عرض"><i class="fa-solid fa-eye"></i></a>
+                <% if (balance > 0) { %>
+                  <a href="/trips/<%= trip._id %>?tab=finance" class="btn btn-outline-primary btn-sm">تحصيل</a>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+          <% if (!reservationFinance.length) { %>
+            <tr><td colspan="10" class="text-center text-muted py-4">لا توجد حجوزات مطابقة</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

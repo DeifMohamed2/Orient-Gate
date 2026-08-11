@@ -1,0 +1,145 @@
+<div class="ops-hub-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">المستخدمين</h1>
+    <p class="ops-hub-sub">إدارة حسابات الموظفين والصلاحيات</p>
+  </div>
+  <div class="page-actions ops-hub-actions">
+    <div class="dropdown">
+      <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="fa-solid fa-file-export me-1"></i> تصدير Excel
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="/users/export<%= buildQueryString(filters) %>">تصدير النتائج الحالية</a></li>
+        <li><a class="dropdown-item" href="/users/export?scope=all">تصدير الكل</a></li>
+      </ul>
+    </div>
+    <a href="/users/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> مستخدم جديد</a>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-users-gear"></i></div>
+    <div class="kpi-body"><div class="kpi-label">إجمالي المستخدمين</div><div class="kpi-value"><%= stats.total %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+    <div class="kpi-body"><div class="kpi-label">نشط</div><div class="kpi-value"><%= stats.active %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-user-slash"></i></div>
+    <div class="kpi-body"><div class="kpi-label">غير نشط</div><div class="kpi-value"><%= stats.inactive %></div></div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+    <div class="kpi-body"><div class="kpi-label">الأدوار</div><div class="kpi-value"><%= roleList.length %></div></div>
+  </div>
+</div>
+
+<div class="ops-status-chips mb-3">
+  <% roleList.forEach(r => { if (!(stats.roleCounts[r])) return; %>
+    <a href="/users<%= buildQueryString({ ...filters, role: r, page: 1 }) %>" class="ops-status-chip<%= filters.role === r ? ' is-active' : '' %>">
+      <%= roleLabel(r) %> <strong><%= stats.roleCounts[r] %></strong>
+    </a>
+  <% }) %>
+  <% if (filters.role) { %>
+    <a href="/users<%= buildQueryString({ ...filters, role: '', page: 1 }) %>" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+  <% } %>
+</div>
+
+<form class="card ops-filters" method="GET">
+  <div class="ops-filters-inner">
+    <div class="ops-filter-search">
+      <i class="fa-solid fa-magnifying-glass ops-filter-icon"></i>
+      <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث بالاسم، البريد، أو الهاتف...">
+    </div>
+    <div class="ops-filter-field">
+      <select name="role" class="form-select">
+        <option value="">كل الأدوار</option>
+        <% roleList.forEach(r => { %>
+          <option value="<%= r %>" <%= filters.role === r ? 'selected' : '' %>><%= roleLabel(r) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="ops-filter-field">
+      <select name="status" class="form-select">
+        <option value="">كل الحالات</option>
+        <option value="active" <%= filters.status === 'active' ? 'selected' : '' %>>نشط</option>
+        <option value="inactive" <%= filters.status === 'inactive' ? 'selected' : '' %>>غير نشط</option>
+      </select>
+    </div>
+    <div class="ops-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> تطبيق</button>
+      <% if (hasActiveFilters) { %><a href="/users" class="btn btn-outline-primary">مسح</a><% } %>
+    </div>
+  </div>
+  <div class="ops-stats">
+    <span class="trip-rail-count"><%= pagination.totalCount %> نتيجة</span>
+    <% if (pagination.totalPages > 1) { %>
+      <span class="text-muted small">•</span>
+      <span class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></span>
+    <% } %>
+  </div>
+</form>
+
+<div class="card table-card ops-table-card mt-4">
+  <% if (users.length) { %>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 ops-table">
+      <thead>
+        <tr>
+          <th>الاسم</th>
+          <th>البريد</th>
+          <th>الهاتف</th>
+          <th>الدور</th>
+          <th>الحالة</th>
+          <th>آخر دخول</th>
+          <th>تاريخ الإنشاء</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => { %>
+          <tr class="users-table-row" data-href="/users/<%= u._id %>/edit">
+            <td class="fw-semibold"><%= u.name %></td>
+            <td class="text-muted small"><%= u.email %></td>
+            <td class="text-muted small"><%= u.phone || '—' %></td>
+            <td><span class="badge bg-light text-dark"><%= roleLabel(u.role) %></span></td>
+            <td><%- include('../partials/badge', { status: u.isActive ? 'active' : 'cancelled' }) %></td>
+            <td class="text-muted small"><%= u.lastLogin ? formatDate(u.lastLogin) : '—' %></td>
+            <td class="text-muted small"><%= formatDate(u.createdAt) %></td>
+            <td class="ops-row-actions">
+              <a href="/users/<%= u._id %>/edit" class="btn btn-icon" title="تعديل"><i class="fa-solid fa-pen"></i></a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% if (pagination.totalPages > 1) { %>
+  <div class="card-footer ops-pagination">
+    <div class="text-muted small">صفحة <%= pagination.page %> من <%= pagination.totalPages %></div>
+    <div class="d-flex gap-2">
+      <% if (pagination.hasPrev) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/users<%= buildQueryString(filters, { page: pagination.page - 1 }) %>">السابق</a>
+      <% } %>
+      <% if (pagination.hasNext) { %>
+        <a class="btn btn-outline-primary btn-sm" href="/users<%= buildQueryString(filters, { page: pagination.page + 1 }) %>">التالي</a>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+  <% } else { %>
+    <div class="ops-empty">
+      <i class="fa-solid fa-users-gear"></i>
+      <p>لا يوجد مستخدمون مطابقون</p>
+      <% if (hasActiveFilters) { %>
+        <a href="/users" class="btn btn-outline-primary btn-sm">مسح الفلاتر</a>
+      <% } else { %>
+        <a href="/users/new" class="btn btn-primary btn-sm">إضافة مستخدم</a>
+      <% } %>
+    </div>
+  <% } %>
+</div>
+
+<script src="/js/users-hub.js"></script>

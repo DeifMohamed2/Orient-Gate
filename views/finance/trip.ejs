@@ -1,0 +1,321 @@
+<div class="finance-trip-header">
+  <div class="finance-trip-header-main">
+    <a href="/trips/<%= trip._id %>" class="btn btn-icon finance-trip-back" title="رجوع للرحلة"><i class="fa-solid fa-arrow-right"></i></a>
+    <div>
+      <h1 class="finance-trip-title">مالية <%= trip.name %></h1>
+      <p class="finance-trip-sub"><i class="fa-regular fa-calendar me-1"></i><%= formatDate(trip.startDate) %> • <%= profitability.reservationCount %> حجز • <%= profitability.passengerCount %> معتمر</p>
+    </div>
+  </div>
+  <div class="finance-trip-actions">
+    <a href="/reservations/new?tripId=<%= trip._id %>" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> حجز جديد</a>
+    <a href="/trips/<%= trip._id %>" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-plane me-1"></i> تفاصيل الرحلة</a>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()"><i class="fa-solid fa-print me-1"></i> طباعة</button>
+  </div>
+</div>
+
+<div class="kpi-grid kpi-grid-compact mb-4">
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-chart-line"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">إجمالي الإيرادات</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.grossRevenue) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المحصل</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.collectedRevenue) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">غير محصل</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.outstanding) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-receipt"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">المصروفات</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.totalExpenses) %></div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-card--icon">
+    <div class="kpi-icon"><i class="fa-solid fa-coins"></i></div>
+    <div class="kpi-body">
+      <div class="kpi-label">صافي الربح</div>
+      <div class="kpi-value kpi-value-sm"><%= formatCurrency(profitability.netProfit) %></div>
+      <div class="kpi-hint"><%= profitability.profitPercent %>%</div>
+    </div>
+  </div>
+</div>
+
+<div class="finance-actions-card card mb-4">
+  <div class="finance-actions-tabs" role="tablist">
+    <button type="button" class="finance-tab is-active" data-tab="payment"><i class="fa-solid fa-plus me-1"></i> تسجيل دفعة</button>
+    <button type="button" class="finance-tab" data-tab="expense"><i class="fa-solid fa-minus me-1"></i> تسجيل مصروف</button>
+    <button type="button" class="finance-tab" data-tab="refund"><i class="fa-solid fa-rotate-left me-1"></i> استرداد</button>
+  </div>
+  <div class="card-body">
+    <div class="finance-tab-panel is-active" id="panel-payment">
+      <form method="POST" action="/finance/payments" class="finance-form needs-validation" novalidate id="paymentForm">
+        <input type="hidden" name="tripId" value="<%= trip._id %>">
+        <input type="hidden" name="invoiceId" id="paymentInvoiceId" value="">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">الحجز <span class="text-danger">*</span></label>
+            <select name="reservationId" id="paymentReservation" class="form-select" required>
+              <option value="">اختر الحجز...</option>
+              <% reservationFinance.forEach(({ reservation: r, invoice, balance, total, paid }) => { %>
+                <option value="<%= r._id %>"
+                  data-invoice="<%= invoice?._id || '' %>"
+                  data-balance="<%= balance %>"
+                  data-total="<%= total %>"
+                  data-paid="<%= paid %>">
+                  <%= r.reservationNumber %> — <%= r.primaryCustomerName %> (متبقي: <%= balance.toLocaleString('ar-EG') %> ج.م.)
+                </option>
+              <% }) %>
+            </select>
+            <div class="invalid-feedback">يرجى اختيار الحجز</div>
+            <div class="form-text" id="paymentBalanceHint"></div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" name="amount" id="paymentAmount" min="1" step="1" required>
+            <div class="invalid-feedback">المبلغ مطلوب</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">الطريقة</label>
+            <select name="method" class="form-select">
+              <option value="cash">نقدي</option>
+              <option value="bank">بنك</option>
+              <option value="card">بطاقة</option>
+              <option value="transfer">تحويل</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">مرجع / رقم العملية</label>
+            <input class="form-control" name="reference" placeholder="اختياري">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">ملاحظات</label>
+            <input class="form-control" name="notes" placeholder="اختياري">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i> تسجيل الدفعة</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="finance-tab-panel" id="panel-expense">
+      <form method="POST" action="/finance/expenses" class="finance-form needs-validation" novalidate>
+        <input type="hidden" name="tripId" value="<%= trip._id %>">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">الفئة</label>
+            <select name="category" class="form-select">
+              <% ['hotel','flight','visa','transport','guide','insurance','other'].forEach(c => { %>
+                <option value="<%= c %>"><%= expenseCategoryLabel(c) %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" name="amount" min="1" step="1" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">المورد</label>
+            <input class="form-control" name="supplier" placeholder="اختياري">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">التاريخ</label>
+            <input type="date" class="form-control" name="expenseDate" value="<%= new Date().toISOString().split('T')[0] %>">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">الوصف</label>
+            <input class="form-control" name="description" placeholder="وصف المصروف">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">مرجع</label>
+            <input class="form-control" name="reference" placeholder="رقم فاتورة / إيصال">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i> تسجيل المصروف</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="finance-tab-panel" id="panel-refund">
+      <% if (invoices.length) { %>
+      <form method="POST" action="/finance/refunds" class="finance-form needs-validation" novalidate id="refundForm">
+        <input type="hidden" name="tripId" value="<%= trip._id %>">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">الفاتورة <span class="text-danger">*</span></label>
+            <select name="invoiceId" id="refundInvoice" class="form-select" required>
+              <% invoices.forEach(i => { %>
+                <option value="<%= i._id %>" data-reservation="<%= i.reservationId %>" data-paid="<%= i.paid %>">
+                  <%= i.invoiceNumber %> — <%= i.customerName %> (مدفوع: <%= i.paid.toLocaleString('ar-EG') %>)
+                </option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">الحجز <span class="text-danger">*</span></label>
+            <select name="reservationId" id="refundReservation" class="form-select" required>
+              <% reservations.forEach(r => { %>
+                <option value="<%= r._id %>"><%= r.reservationNumber %> — <%= r.primaryCustomerName %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">مبلغ الاسترداد <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" name="amount" id="refundAmount" min="1" step="1" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">الطريقة</label>
+            <select name="method" class="form-select">
+              <option value="transfer">تحويل</option>
+              <option value="cash">نقدي</option>
+              <option value="bank">بنك</option>
+            </select>
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <label class="finance-checkbox-label">
+              <input type="checkbox" name="fullRefund" value="true" id="fullRefundCheck"> استرداد كامل
+            </label>
+          </div>
+          <div class="col-12">
+            <button class="btn btn-outline-danger" type="submit"><i class="fa-solid fa-rotate-left me-1"></i> تسجيل الاسترداد</button>
+          </div>
+        </div>
+      </form>
+      <% } else { %>
+        <p class="text-muted mb-0">لا توجد فواتير لهذه الرحلة بعد.</p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<ul class="nav nav-tabs finance-data-tabs mb-3" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-invoices" type="button">الفواتير (<%= invoices.length %>)</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-payments" type="button">المدفوعات (<%= payments.length %>)</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-expenses" type="button">المصروفات (<%= expenses.length %>)</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-reservations" type="button">الحجوزات (<%= reservationFinance.length %>)</button></li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-invoices">
+    <div class="card table-card">
+      <div class="card-body p-0 table-card">
+        <% if (invoices.length) { %>
+        <table class="table table-hover mb-0 finance-table">
+          <thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th></tr></thead>
+          <tbody>
+            <% invoices.forEach(i => { %>
+              <tr>
+                <td class="fw-semibold"><%= i.invoiceNumber %></td>
+                <td><%= i.customerName %></td>
+                <td><%= formatCurrency(i.total) %></td>
+                <td><%= formatCurrency(i.paid) %></td>
+                <td class="<%= i.balance > 0 ? 'text-danger fw-semibold' : '' %>"><%= formatCurrency(i.balance) %></td>
+                <td><%- include('../partials/badge', { status: i.status }) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% } else { %>
+          <div class="finance-empty"><i class="fa-solid fa-file-invoice"></i><p>لا توجد فواتير</p></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-payments">
+    <div class="card table-card">
+      <div class="card-body p-0">
+        <% if (payments.length) { %>
+        <table class="table table-hover mb-0 finance-table">
+          <thead><tr><th>التاريخ</th><th>رقم الدفعة</th><th>المبلغ</th><th>الطريقة</th><th>ملاحظات</th></tr></thead>
+          <tbody>
+            <% payments.forEach(p => { %>
+              <tr>
+                <td><%= formatDate(p.paymentDate) %></td>
+                <td class="text-muted small"><%= p.paymentNumber %></td>
+                <td class="fw-semibold <%= p.isRefund || p.amount < 0 ? 'text-danger' : 'text-success' %>"><%= formatCurrency(p.amount) %></td>
+                <td><%= paymentMethodLabel(p.method) %></td>
+                <td class="text-muted small"><%= p.notes || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% } else { %>
+          <div class="finance-empty"><i class="fa-solid fa-money-bill-wave"></i><p>لا توجد مدفوعات</p></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-expenses">
+    <div class="card table-card">
+      <div class="card-body p-0">
+        <% if (expenses.length) { %>
+        <table class="table table-hover mb-0 finance-table">
+          <thead><tr><th>التاريخ</th><th>الفئة</th><th>الوصف</th><th>المورد</th><th>المبلغ</th></tr></thead>
+          <tbody>
+            <% expenses.forEach(e => { %>
+              <tr>
+                <td><%= formatDate(e.expenseDate) %></td>
+                <td><span class="badge bg-light text-dark"><%= expenseCategoryLabel(e.category) %></span></td>
+                <td><%= e.description || '—' %></td>
+                <td class="text-muted"><%= e.supplier || '—' %></td>
+                <td class="fw-semibold text-danger"><%= formatCurrency(e.amount) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% } else { %>
+          <div class="finance-empty"><i class="fa-solid fa-receipt"></i><p>لا توجد مصروفات</p></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-reservations">
+    <div class="card table-card">
+      <div class="card-body p-0">
+        <% if (reservationFinance.length) { %>
+        <table class="table table-hover mb-0 finance-table">
+          <thead><tr><th>رقم الحجز</th><th>العميل</th><th>الإجمالي</th><th>المدفوع</th><th>المتبقي</th><th>الدفع</th><th></th></tr></thead>
+          <tbody>
+            <% reservationFinance.forEach(({ reservation: r, total, paid, balance }) => { %>
+              <tr>
+                <td><a href="/reservations/<%= r._id %>" class="reservations-link"><%= r.reservationNumber %></a></td>
+                <td class="fw-semibold"><%= r.primaryCustomerName %></td>
+                <td><%= formatCurrency(total) %></td>
+                <td><%= formatCurrency(paid) %></td>
+                <td class="<%= balance > 0 ? 'text-danger fw-semibold' : '' %>"><%= formatCurrency(balance) %></td>
+                <td><%- include('../partials/badge', { status: r.paymentStatus }) %></td>
+                <td>
+                  <% if (balance > 0) { %>
+                    <button type="button" class="btn btn-outline-primary btn-sm finance-quick-pay" data-reservation="<%= r._id %>">تحصيل</button>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% } else { %>
+          <div class="finance-empty"><i class="fa-solid fa-calendar-xmark"></i><p>لا توجد حجوزات نشطة</p></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/finance-trip.js"></script>

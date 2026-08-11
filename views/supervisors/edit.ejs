@@ -1,0 +1,17 @@
+<%- include('../partials/page-header', {
+  pageTitle: 'تعديل المشرف',
+  pageSubtitle: supervisor.name,
+  pageActionsHtml: '<a href="/supervisors/' + supervisor._id + '" class="btn btn-outline-primary btn-sm">رجوع</a>'
+}) %>
+<div class="card">
+  <div class="card-body">
+    <form method="POST" action="/supervisors/<%= supervisor._id %>">
+      <input type="hidden" name="_method" value="PUT">
+      <%- include('_supervisor-form', { supervisor }) %>
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-check me-1"></i> حفظ</button>
+        <a href="/supervisors/<%= supervisor._id %>" class="btn btn-outline-primary">إلغاء</a>
+      </div>
+    </form>
+  </div>
+</div>

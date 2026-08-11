@@ -1,0 +1,105 @@
+<div class="trip-hub-panel">
+  <% const baseUrl = '/trips/' + trip._id + '?tab=operations'; %>
+  <nav class="trip-hub-ops-subnav" aria-label="عمليات الرحلة">
+    <a href="<%= baseUrl %>&ops=visa" class="trip-hub-ops-subnav__link <%= activeOps === 'visa' ? 'is-active' : '' %>">
+      <i class="fa-solid fa-passport me-1"></i> التأشيرات
+      <% if (visaStatusCounts?.pending) { %><span class="trip-hub-tab-badge trip-hub-tab-badge--warn"><%= visaStatusCounts.pending %></span><% } %>
+    </a>
+    <a href="<%= baseUrl %>&ops=transport" class="trip-hub-ops-subnav__link <%= activeOps === 'transport' ? 'is-active' : '' %>">
+      <i class="fa-solid fa-bus me-1"></i> النقل
+      <% if (transportStatusCounts?.pending) { %><span class="trip-hub-tab-badge trip-hub-tab-badge--warn"><%= transportStatusCounts.pending %></span><% } %>
+    </a>
+  </nav>
+
+  <% if (activeOps === 'visa') { %>
+    <div class="trip-hub-status-chips mb-3">
+      <% Object.entries(visaStatusCounts || {}).forEach(([status, count]) => { if (!count) return; %>
+        <a href="<%= baseUrl %>&ops=visa&visaStatus=<%= status %>" class="trip-hub-status-chip <%= filters.visaStatus === status ? 'is-active' : '' %>">
+          <%= statusLabel(status) %> <strong><%= count %></strong>
+        </a>
+      <% }) %>
+      <% if (filters.visaStatus) { %>
+        <a href="<%= baseUrl %>&ops=visa" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+      <% } %>
+    </div>
+
+    <div class="card table-card">
+      <div class="card-header">تأشيرات المعتمرين (<%= visaRecords.length %>)</div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0 trip-hub-table">
+          <thead><tr><th>المعتمر</th><th>الحجز</th><th>الحالة</th><th>تحديث</th></tr></thead>
+          <tbody>
+            <% visaRecords.forEach(({ reservation, member }) => { %>
+              <tr>
+                <td><%= member.name %></td>
+                <td><a href="/reservations/<%= reservation._id %>"><%= reservation.reservationNumber %></a></td>
+                <td><%- include('../../partials/badge', { status: member.visaStatus || 'pending' }) %></td>
+                <td>
+                  <form method="POST" action="/visa/<%= reservation._id %>/<%= member._id %>" class="d-inline-flex gap-1 align-items-center">
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" name="tripId" value="<%= trip._id %>">
+                    <select name="visaStatus" class="form-select form-select-sm w-auto">
+                      <% ['pending','submitted','approved','rejected','issued'].forEach(s => { %>
+                        <option value="<%= s %>" <%= member.visaStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+                      <% }) %>
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary" type="submit">حفظ</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (!visaRecords.length) { %>
+              <tr><td colspan="4" class="text-center text-muted py-4">لا توجد سجلات تأشيرات</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } else { %>
+    <div class="trip-hub-status-chips mb-3">
+      <% Object.entries(transportStatusCounts || {}).forEach(([status, count]) => { if (!count) return; %>
+        <a href="<%= baseUrl %>&ops=transport&transportStatus=<%= status %>" class="trip-hub-status-chip <%= filters.transportStatus === status ? 'is-active' : '' %>">
+          <%= statusLabel(status) %> <strong><%= count %></strong>
+        </a>
+      <% }) %>
+      <% if (filters.transportStatus) { %>
+        <a href="<%= baseUrl %>&ops=transport" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+      <% } %>
+    </div>
+
+    <div class="card table-card">
+      <div class="card-header">تسكين النقل (<%= transportRecords.length %>)</div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0 trip-hub-table">
+          <thead><tr><th>المعتمر</th><th>الحجز</th><th>المجموعة</th><th>الحالة</th><th>تحديث</th></tr></thead>
+          <tbody>
+            <% transportRecords.forEach(({ reservation, member }) => { %>
+              <tr>
+                <td><%= member.name %></td>
+                <td><a href="/reservations/<%= reservation._id %>"><%= reservation.reservationNumber %></a></td>
+                <td><%= member.transportGroup || '—' %></td>
+                <td><%- include('../../partials/badge', { status: member.transportStatus || 'pending' }) %></td>
+                <td>
+                  <form method="POST" action="/transport/<%= reservation._id %>/<%= member._id %>" class="d-inline-flex gap-1 align-items-center">
+                    <input type="hidden" name="_method" value="PUT">
+                    <input type="hidden" name="tripId" value="<%= trip._id %>">
+                    <select name="transportStatus" class="form-select form-select-sm w-auto">
+                      <% ['pending','assigned','confirmed'].forEach(s => { %>
+                        <option value="<%= s %>" <%= member.transportStatus === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+                      <% }) %>
+                    </select>
+                    <input name="transportGroup" class="form-control form-control-sm w-auto" placeholder="مجموعة" value="<%= member.transportGroup || '' %>">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">حفظ</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+            <% if (!transportRecords.length) { %>
+              <tr><td colspan="5" class="text-center text-muted py-4">لا توجد سجلات نقل</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+</div>

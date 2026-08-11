@@ -1,0 +1,19 @@
+<%- include('../partials/page-header', { pageTitle: 'الموردين', pageActionsHtml: '<a href="/suppliers/new" class="btn btn-primary btn-sm">مورد جديد</a>' }) %>
+<form class="card filters-toolbar" method="GET">
+  <input type="search" name="search" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث">
+  <select name="category" class="form-select"><option value="">كل الفئات</option>
+    <% ['hotel','flight','visa','transport','guide','insurance','other'].forEach(c => { %><option value="<%= c %>" <%= filters.category === c ? 'selected' : '' %>><%= c %></option><% }) %>
+  </select>
+  <button class="btn btn-primary" type="submit">بحث</button>
+</form>
+<div class="card table-card mt-4">
+  <table class="table table-hover mb-0">
+    <thead><tr><th>الاسم</th><th>الفئة</th><th>التواصل</th><th></th></tr></thead>
+    <tbody>
+      <% suppliers.forEach(s => { %>
+        <tr><td><%= s.name %></td><td><%= s.category %></td><td><%= s.phone || s.email || '—' %></td>
+        <td><a href="/suppliers/<%= s._id %>/edit" class="btn btn-outline-primary btn-sm">تعديل</a></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

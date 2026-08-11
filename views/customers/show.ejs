@@ -1,0 +1,253 @@
+<% const c = profile.customer; const fin = profile.finance; %>
+
+<div class="customers-profile-header">
+  <div class="customers-profile-header-main">
+    <a href="/customers" class="btn btn-icon customers-profile-back" title="رجوع"><i class="fa-solid fa-arrow-right"></i></a>
+    <div>
+      <h1 class="customers-profile-title"><%= c.name %></h1>
+      <p class="customers-profile-sub">
+        <%= c.passport ? 'جواز: ' + c.passport : 'بدون جواز' %>
+        <% if (c.nationality) { %> — <%= c.nationality %><% } %>
+      </p>
+      <div class="customers-badges mt-1">
+        <% if (c.isVip) { %><span class="badge-status badge-warning">VIP</span><% } %>
+        <% if (c.isBlacklisted) { %><span class="badge-status badge-danger">قائمة سوداء</span><% } %>
+        <% if (profile.passportExpiringSoon) { %>
+          <span class="badge-status badge-warning"><i class="fa-solid fa-passport me-1"></i>جواز قارب الانتهاء</span>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  <div class="customers-profile-actions">
+    <a href="/reservations/new?customerId=<%= c._id %>" class="btn btn-primary btn-sm"><i class="fa-solid fa-calendar-plus me-1"></i> حجز جديد</a>
+    <a href="/customers/<%= c._id %>/edit" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-pen me-1"></i> تعديل</a>
+    <a href="/customers/export?search=<%= encodeURIComponent(c.name) %>" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-file-export me-1"></i> تصدير</a>
+    <button type="button" class="btn btn-outline-primary btn-sm" id="customerPrintBtn"><i class="fa-solid fa-print me-1"></i> طباعة</button>
+  </div>
+</div>
+
+<ul class="nav nav-tabs customers-tabs mb-4" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link<%= activeTab === 'overview' ? ' active' : '' %>" data-bs-toggle="tab" data-bs-target="#tabOverview" type="button">نظرة عامة</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link<%= activeTab === 'reservations' ? ' active' : '' %>" data-bs-toggle="tab" data-bs-target="#tabReservations" type="button">
+      الحجوزات <span class="badge bg-light text-dark ms-1"><%= profile.reservationRows.length %></span>
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link<%= activeTab === 'finance' ? ' active' : '' %>" data-bs-toggle="tab" data-bs-target="#tabFinance" type="button">المالية</button>
+  </li>
+</ul>
+
+<div class="tab-content customers-tab-content" id="customerProfileTabs">
+  <div class="tab-pane fade<%= activeTab === 'overview' ? ' show active' : '' %>" id="tabOverview" role="tabpanel">
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header"><i class="fa-solid fa-id-card me-2 text-primary"></i>البيانات الشخصية</div>
+          <div class="card-body">
+            <ul class="detail-list">
+              <li><span>الاسم</span><strong><%= c.name %></strong></li>
+              <li><span>الجواز</span><strong><%= c.passport || '—' %></strong></li>
+              <li><span>انتهاء الجواز</span><strong><%= formatDate(c.passportExpiry) || '—' %></strong></li>
+              <li><span>الجنسية</span><strong><%= c.nationality || '—' %></strong></li>
+              <li><span>الجنس</span><strong><%= genderLabel(c.gender) %></strong></li>
+              <li><span>تاريخ الميلاد</span><strong><%= formatDate(c.birthDate) || '—' %></strong></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header"><i class="fa-solid fa-address-book me-2 text-primary"></i>التواصل</div>
+          <div class="card-body">
+            <ul class="detail-list">
+              <li><span>الهواتف</span><strong><%= (c.phones || []).join(' — ') || '—' %></strong></li>
+              <li><span>البريد</span><strong><%= c.email || '—' %></strong></li>
+              <li><span>جهة الطوارئ</span><strong><%= c.emergencyContact?.name || '—' %></strong></li>
+              <li><span>هاتف الطوارئ</span><strong><%= c.emergencyContact?.phone || '—' %></strong></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header"><i class="fa-solid fa-star me-2 text-primary"></i>الحالة والولاء</div>
+          <div class="card-body">
+            <ul class="detail-list">
+              <li><span>VIP</span><strong><%= c.isVip ? 'نعم' : 'لا' %></strong></li>
+              <li><span>قائمة سوداء</span><strong><%= c.isBlacklisted ? 'نعم' : 'لا' %></strong></li>
+              <li><span>نقاط الولاء</span><strong><%= c.loyaltyPoints || 0 %></strong></li>
+              <li><span>موافقة تسويق</span><strong><%= c.marketingConsent ? 'نعم' : 'لا' %></strong></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card">
+          <div class="card-header"><i class="fa-solid fa-note-sticky me-2 text-primary"></i>ملاحظات</div>
+          <div class="card-body">
+            <div class="customers-note-block">
+              <div class="customers-note-label">ملاحظات عامة</div>
+              <p class="customers-note-text"><%= c.notes || '—' %></p>
+            </div>
+            <div class="customers-note-block mt-3">
+              <div class="customers-note-label">ملاحظات طبية</div>
+              <p class="customers-note-text"><%= c.medicalNotes || '—' %></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card customers-audit-card">
+          <div class="card-body text-muted small">
+            تاريخ التسجيل: <%= formatDate(c.createdAt) %>
+            <% if (c.createdBy?.name) { %> — بواسطة <%= c.createdBy.name %><% } %>
+            <% if (c.updatedAt) { %>
+              <span class="mx-2">•</span>
+              آخر تحديث: <%= formatDate(c.updatedAt) %>
+              <% if (c.updatedBy?.name) { %> — <%= c.updatedBy.name %><% } %>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade<%= activeTab === 'reservations' ? ' show active' : '' %>" id="tabReservations" role="tabpanel">
+    <div class="card table-card">
+      <% if (profile.reservationRows.length) { %>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>رقم الحجز</th>
+              <th>الرحلة</th>
+              <th>الدور</th>
+              <th>تاريخ الحجز</th>
+              <th>الحالة</th>
+              <th>الدفع</th>
+              <th>الإجمالي</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% profile.reservationRows.forEach(({ reservation: r, role }) => { %>
+              <tr>
+                <td><a href="/reservations/<%= r._id %>"><%= r.reservationNumber %></a></td>
+                <td>
+                  <% if (r.tripId?._id) { %>
+                    <a href="/trips/<%= r.tripId._id %>"><%= r.tripId.name %></a>
+                  <% } else { %>—<% } %>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark"><%= role === 'primary' ? 'رئيسي' : 'عضو' %></span>
+                </td>
+                <td class="text-muted small"><%= formatDate(r.bookingDate) %></td>
+                <td><%- include('../partials/badge', { status: r.status }) %></td>
+                <td><%- include('../partials/badge', { status: r.paymentStatus }) %></td>
+                <td class="fw-semibold"><%= formatCurrency(r.pricingSnapshot?.total) %></td>
+                <td><a href="/reservations/<%= r._id %>" class="btn btn-icon" title="عرض"><i class="fa-solid fa-eye"></i></a></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } else { %>
+        <div class="customers-empty py-5">
+          <i class="fa-solid fa-calendar-xmark"></i>
+          <p>لا توجد حجوزات لهذا العميل</p>
+          <a href="/reservations/new?customerId=<%= c._id %>" class="btn btn-primary btn-sm">إنشاء حجز</a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="tab-pane fade<%= activeTab === 'finance' ? ' show active' : '' %>" id="tabFinance" role="tabpanel">
+    <div class="kpi-grid kpi-grid-compact mb-4">
+      <div class="kpi-card kpi-card--icon">
+        <div class="kpi-icon"><i class="fa-solid fa-file-invoice"></i></div>
+        <div class="kpi-body">
+          <div class="kpi-label">إجمالي الفواتير</div>
+          <div class="kpi-value kpi-value-sm"><%= formatCurrency(fin.totalInvoiced) %></div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--icon">
+        <div class="kpi-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+        <div class="kpi-body">
+          <div class="kpi-label">المدفوع</div>
+          <div class="kpi-value kpi-value-sm"><%= formatCurrency(fin.totalPaid) %></div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--icon">
+        <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+        <div class="kpi-body">
+          <div class="kpi-label">المتبقي</div>
+          <div class="kpi-value kpi-value-sm"><%= formatCurrency(fin.outstanding) %></div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-card--icon">
+        <div class="kpi-icon"><i class="fa-solid fa-receipt"></i></div>
+        <div class="kpi-body">
+          <div class="kpi-label">إجمالي الدفعات</div>
+          <div class="kpi-value kpi-value-sm"><%= formatCurrency(fin.paymentTotal) %></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card table-card">
+          <div class="card-header">الفواتير</div>
+          <% if (profile.invoices.length) { %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead><tr><th>الرقم</th><th>الرحلة</th><th>الإجمالي</th><th>المتبقي</th><th>الحالة</th></tr></thead>
+              <tbody>
+                <% profile.invoices.forEach(inv => { %>
+                  <tr>
+                    <td class="fw-semibold"><%= inv.invoiceNumber %></td>
+                    <td class="small"><%= inv.tripId?.name || '—' %></td>
+                    <td><%= formatCurrency(inv.total) %></td>
+                    <td><%= formatCurrency(inv.balance) %></td>
+                    <td><%- include('../partials/badge', { status: inv.status }) %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } else { %>
+            <div class="text-center text-muted py-4">لا توجد فواتير</div>
+          <% } %>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card table-card">
+          <div class="card-header">الدفعات</div>
+          <% if (profile.payments.length) { %>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead><tr><th>الرقم</th><th>التاريخ</th><th>المبلغ</th><th>الطريقة</th></tr></thead>
+              <tbody>
+                <% profile.payments.forEach(p => { %>
+                  <tr>
+                    <td class="fw-semibold"><%= p.paymentNumber %></td>
+                    <td class="small text-muted"><%= formatDate(p.paymentDate) %></td>
+                    <td><%= formatCurrency(p.amount) %></td>
+                    <td><%= paymentMethodLabel(p.method) %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <% } else { %>
+            <div class="text-center text-muted py-4">لا توجد دفعات</div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/customers.js"></script>

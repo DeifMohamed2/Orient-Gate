@@ -1,0 +1,77 @@
+<div class="dash-hub-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title page-title--compact">الرحلات</h1>
+    <p class="dash-hub-sub">إدارة رحلات الحج والعمرة</p>
+  </div>
+  <div class="page-actions">
+    <a href="/trips/new" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> رحلة جديدة</a>
+    <button type="button" class="btn btn-outline-primary btn-sm" id="tripsViewToggle" data-view="grid" title="عرض منزلق">
+      <i class="fa-solid fa-bars-staggered"></i>
+    </button>
+  </div>
+</div>
+
+<form class="card dash-hub-filters trips-filters" method="GET" id="tripsFilterForm">
+  <div class="dash-hub-filters-inner">
+    <div class="dash-hub-filter-search">
+      <i class="fa-solid fa-magnifying-glass dash-hub-filter-icon" aria-hidden="true"></i>
+      <input type="search" name="search" id="tripsClientSearch" class="form-control" value="<%= filters.search || '' %>" placeholder="بحث بالاسم، شركة الطيران، أو المدينة...">
+    </div>
+    <div class="dash-hub-filter-field">
+      <select name="status" class="form-select">
+        <option value="">كل الحالات</option>
+        <% ['active','completed','cancelled'].forEach(s => { %>
+          <option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= statusLabel(s) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="dash-hub-filter-actions">
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-filter me-1"></i> بحث</button>
+      <% if (hasActiveFilters) { %>
+        <a href="/trips" class="btn btn-outline-primary">مسح</a>
+      <% } %>
+    </div>
+  </div>
+  <% if (tripCards.length) { %>
+    <div class="dash-hub-stats">
+      <span class="trip-rail-count"><%= tripCards.length %> رحلة</span>
+      <span class="text-muted small">• نشطة أولاً، الأحدث في الأعلى</span>
+      <span class="text-muted small">• عرض شبكي افتراضي</span>
+    </div>
+  <% } %>
+</form>
+
+<% if (tripCards.length) { %>
+<div class="trip-rail-wrap mt-3" id="tripsRailView" hidden>
+  <div class="trip-rail-fade trip-rail-fade--start" aria-hidden="true"></div>
+  <button type="button" class="trip-rail-nav trip-rail-nav--prev" aria-label="السابق"><i class="fa-solid fa-chevron-right"></i></button>
+  <div class="trip-rail" id="tripRail">
+    <% tripCards.forEach(({ trip, hotelCount, profitability, seatStats }) => { %>
+      <%- include('../partials/trip-card', { trip, hotelCount, profitability, seatStats, formatDate, formatCurrency, showBookButton: true }) %>
+    <% }) %>
+  </div>
+  <button type="button" class="trip-rail-nav trip-rail-nav--next" aria-label="التالي"><i class="fa-solid fa-chevron-left"></i></button>
+  <div class="trip-rail-fade trip-rail-fade--end" aria-hidden="true"></div>
+  <div class="trip-rail-progress"><div class="trip-rail-progress-bar"></div></div>
+  <div class="trip-rail-filter-empty" hidden>
+    <p>لا توجد رحلات مطابقة للبحث الحالي</p>
+  </div>
+</div>
+
+<div class="trip-cards-grid mt-3" id="tripsGridView">
+  <% tripCards.forEach(({ trip, hotelCount, profitability, seatStats }) => { %>
+    <%- include('../partials/trip-card', { trip, hotelCount, profitability, seatStats, formatDate, formatCurrency, showBookButton: true }) %>
+  <% }) %>
+  <div class="trip-grid-filter-empty" id="tripsGridFilterEmpty" hidden>
+    <p>لا توجد رحلات مطابقة للبحث الحالي</p>
+  </div>
+</div>
+<% } else { %>
+<div class="trip-rail-empty card mt-3">
+  <i class="fa-solid fa-plane-slash"></i>
+  <p>لا توجد رحلات مطابقة للبحث</p>
+  <a href="/trips" class="btn btn-outline-primary btn-sm">عرض كل الرحلات</a>
+</div>
+<% } %>
+
+<script src="/js/dashboard-hub.js"></script>

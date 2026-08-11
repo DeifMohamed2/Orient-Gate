@@ -1,0 +1,13 @@
+<% if (typeof hidePageHeader === 'undefined' || !hidePageHeader) { %>
+<div class="page-header">
+  <div class="flex-grow-1 min-w-0">
+    <h1 class="page-title"><%= typeof pageTitle !== 'undefined' ? pageTitle : (typeof title !== 'undefined' ? title : 'الصفحة') %></h1>
+    <% if (typeof pageSubtitle !== 'undefined' && pageSubtitle) { %>
+      <p class="page-subtitle"><%= pageSubtitle %></p>
+    <% } %>
+  </div>
+  <% if (typeof pageActionsHtml !== 'undefined' && pageActionsHtml) { %>
+    <div class="page-actions"><%- pageActionsHtml %></div>
+  <% } %>
+</div>
+<% } %>

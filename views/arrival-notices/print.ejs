@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>إشعار الوصول رقم ( <%= notice.noticeNumber %> ) — <%= trip.name %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/arrival-notice.css" />
+</head>
+<% 
+  const itin = typeof source !== 'undefined' && source ? source.itineraryType : 'both';
+  const showMakkah = itin !== 'medina_only' && (notice.makkahHotelName || itin === 'both' || itin === 'makkah_only');
+  const showMedina = itin !== 'makkah_only' && (notice.medinaHotelName || itin === 'both' || itin === 'medina_only');
+  const printMovements = (notice.movements || []).filter((m) => m.description || m.from || m.to);
+%>
+<body class="arrival-print-body" data-back-url="/arrival-notices/<%= notice._id %>/edit"<% if (typeof autoPrint !== 'undefined' && autoPrint) { %> data-auto-print="1"<% } %>>
+  <div class="arrival-print-wrap">
+    <div class="arrival-sheet">
+      <header class="arrival-print-header">
+        <% if (settings.logoUrl) { %>
+          <img src="<%= settings.logoUrl %>" alt="" class="arrival-logo" />
+        <% } %>
+        <h1 class="arrival-print-title">إشعار الوصول رقم : ( <%= notice.noticeNumber %> )</h1>
+        <p class="arrival-agent-line">اسم الوكيل : <strong><%= settings.agentName %></strong></p>
+        <% if (settings.agencyNameAr) { %>
+          <p class="arrival-agency-line"><%= settings.agencyNameAr %></p>
+        <% } %>
+      </header>
+
+      <table class="arrival-doc-table arrival-flight-doc">
+        <thead>
+          <tr>
+            <th></th>
+            <th>منفذ</th>
+            <th>وسيلة النقل</th>
+            <th>رقم الرحلة</th>
+            <th>التاريخ</th>
+            <th>التوقيت</th>
+            <th>الخطوط</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>الوصول</th>
+            <td><%= notice.arrivalPort || '—' %></td>
+            <td><%= notice.arrivalTransportMode || '—' %></td>
+            <td><%= notice.arrivalFlightNumber || '—' %></td>
+            <td><%= notice.arrivalDate ? formatDateShort(notice.arrivalDate) : '—' %></td>
+            <td><%= notice.arrivalTime || '—' %></td>
+            <td><%= notice.arrivalAirline || '—' %></td>
+          </tr>
+          <tr>
+            <th>المغادرة</th>
+            <td><%= notice.departurePort || '—' %></td>
+            <td><%= notice.departureTransportMode || '—' %></td>
+            <td><%= notice.departureFlightNumber || '—' %></td>
+            <td><%= notice.departureDate ? formatDateShort(notice.departureDate) : '—' %></td>
+            <td><%= notice.departureTime || '—' %></td>
+            <td><%= notice.departureAirline || '—' %></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <% if (showMakkah || showMedina) { %>
+      <table class="arrival-doc-table arrival-hotel-doc mt-3">
+        <thead>
+          <tr>
+            <% if (showMakkah) { %><th colspan="3">مكة المكرمة</th><% } %>
+            <% if (showMedina) { %><th colspan="3">المدينة المنورة</th><% } %>
+          </tr>
+          <tr>
+            <% if (showMakkah) { %>
+              <th>الفندق</th><th>دخول</th><th>خروج</th>
+            <% } %>
+            <% if (showMedina) { %>
+              <th>الفندق</th><th>دخول</th><th>خروج</th>
+            <% } %>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <% if (showMakkah) { %>
+              <td><%= notice.makkahHotelName || '—' %></td>
+              <td><%= notice.makkahCheckIn ? formatDateShort(notice.makkahCheckIn) : '—' %></td>
+              <td><%= notice.makkahCheckOut ? formatDateShort(notice.makkahCheckOut) : '—' %></td>
+            <% } %>
+            <% if (showMedina) { %>
+              <td><%= notice.medinaHotelName || '—' %></td>
+              <td><%= notice.medinaCheckIn ? formatDateShort(notice.medinaCheckIn) : '—' %></td>
+              <td><%= notice.medinaCheckOut ? formatDateShort(notice.medinaCheckOut) : '—' %></td>
+            <% } %>
+          </tr>
+        </tbody>
+      </table>
+      <% } %>
+
+      <div class="arrival-summary-line mt-3">
+        <span>أرقام المجموعات: <strong><%= notice.groupNumbers || '—' %></strong></span>
+        <span>عدد المعتمرين: <strong><%= notice.pilgrimCount || 0 %></strong></span>
+        <span>عدد الباصات: <strong><%= notice.busCount || 0 %></strong></span>
+      </div>
+
+      <table class="arrival-doc-table arrival-movements-doc mt-3">
+        <thead>
+          <tr>
+            <th style="width:30px">م</th>
+            <th>بيانات</th>
+            <th>من</th>
+            <th>إلى</th>
+            <th>التوقيت</th>
+            <th>التاريخ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (printMovements.length) { %>
+            <% printMovements.forEach((m, i) => { %>
+              <tr>
+                <td class="text-center"><%= i + 1 %></td>
+                <td><%= m.description || '' %></td>
+                <td><%= m.from || '' %></td>
+                <td><%= m.to || '' %></td>
+                <td><%= m.time || '' %></td>
+                <td><%= m.date ? formatDateShort(m.date) : '' %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr><td colspan="6" class="text-center">—</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <% if (notice.notes) { %>
+        <p class="arrival-notes mt-3"><strong>ملاحظات:</strong> <%= notice.notes %></p>
+      <% } %>
+
+      <footer class="arrival-print-footer">
+        <span><%= settings.agencyNameAr || 'أورينت جيت للسياحة' %></span>
+        <span>تاريخ الطباعة: <%= new Date().toLocaleDateString('ar-EG') %></span>
+      </footer>
+    </div>
+
+    <div class="arrival-print-bar no-print">
+      <button type="button" class="arrival-print-btn" id="arrivalPrintBtn">طباعة / حفظ PDF</button>
+      <a href="/arrival-notices/<%= notice._id %>/edit" class="arrival-print-btn arrival-print-btn--muted" id="arrivalBackBtn">رجوع للتعديل</a>
+    </div>
+  </div>
+
+  <script src="/js/arrival-notice.js"></script>
+</body>
+</html>

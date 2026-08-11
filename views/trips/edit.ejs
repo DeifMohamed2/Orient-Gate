@@ -1,0 +1,26 @@
+<%- include('../partials/page-header', {
+  pageTitle: 'تعديل الرحلة',
+  pageSubtitle: trip.name,
+  pageActionsHtml: '<a href="/trips/' + trip._id + '" class="btn btn-outline-primary btn-sm">رجوع</a>'
+}) %>
+
+<%- include('./_form', {
+  trip,
+  formHotels,
+  costHotels,
+  draftFormHotels: typeof draftFormHotels !== 'undefined' ? draftFormHotels : undefined,
+  vipCatalog: typeof vipCatalog !== 'undefined' ? vipCatalog : [],
+  isEdit: true,
+  formActionUrl: '/trips/' + trip._id,
+  formMethodOverride: 'PUT',
+  HOTEL_STARS,
+  ROOM_TYPES,
+  CITIES,
+  cityLabel,
+  roomTypeLabel,
+  statusLabel,
+  supervisors: typeof supervisors !== 'undefined' ? supervisors : [],
+  defaultCosts: typeof defaultCosts !== 'undefined' ? defaultCosts : {},
+  restoreFormDraft: typeof restoreFormDraft !== 'undefined' ? restoreFormDraft : false,
+  resolveFlightLegs,
+}) %>

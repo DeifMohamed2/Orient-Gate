@@ -1,0 +1,101 @@
+<% const isEdit = typeof customer._id !== 'undefined' && customer._id; %>
+<% const fmtDate = (d) => d ? new Date(d).toISOString().split('T')[0] : ''; %>
+
+<div class="form-section">
+  <h3 class="form-section-title"><i class="fa-solid fa-id-card me-2 text-primary"></i>البيانات الشخصية</h3>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">الاسم <span class="text-danger">*</span></label>
+      <input class="form-control" name="name" value="<%= customer.name || '' %>" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">رقم الجواز</label>
+      <input class="form-control" name="passport" value="<%= customer.passport || '' %>">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">انتهاء الجواز</label>
+      <input type="date" class="form-control" name="passportExpiry" value="<%= fmtDate(customer.passportExpiry) %>">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">الجنسية</label>
+      <input class="form-control" name="nationality" value="<%= customer.nationality || 'مصر' %>">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">الجنس</label>
+      <select name="gender" class="form-select">
+        <option value="male" <%= customer.gender === 'male' || !customer.gender ? 'selected' : '' %>>ذكر</option>
+        <option value="female" <%= customer.gender === 'female' ? 'selected' : '' %>>أنثى</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">تاريخ الميلاد</label>
+      <input type="date" class="form-control" name="birthDate" value="<%= fmtDate(customer.birthDate) %>">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3 class="form-section-title"><i class="fa-solid fa-address-book me-2 text-primary"></i>التواصل</h3>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">الهواتف (فاصلة بين الأرقام)</label>
+      <input class="form-control" name="phones" value="<%= (customer.phones || []).join(', ') %>" placeholder="01xxxxxxxxx, 02xxxxxxxx">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">البريد الإلكتروني</label>
+      <input type="email" class="form-control" name="email" value="<%= customer.email || '' %>">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">اسم جهة الطوارئ</label>
+      <input class="form-control" name="emergencyContactName" value="<%= customer.emergencyContact?.name || '' %>">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">هاتف جهة الطوارئ</label>
+      <input class="form-control" name="emergencyContactPhone" value="<%= customer.emergencyContact?.phone || '' %>">
+    </div>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3 class="form-section-title"><i class="fa-solid fa-sliders me-2 text-primary"></i>الحالة</h3>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-check-label d-block">
+        <input type="checkbox" class="form-check-input me-2" name="isVip" value="true" <%= customer.isVip ? 'checked' : '' %>>
+        عميل VIP
+      </label>
+    </div>
+    <div class="col-md-4">
+      <label class="form-check-label d-block">
+        <input type="checkbox" class="form-check-input me-2" name="isBlacklisted" value="true" <%= customer.isBlacklisted ? 'checked' : '' %>>
+        قائمة سوداء
+      </label>
+    </div>
+    <div class="col-md-4">
+      <label class="form-check-label d-block">
+        <input type="checkbox" class="form-check-input me-2" name="marketingConsent" value="true" <%= customer.marketingConsent ? 'checked' : '' %>>
+        موافقة على التسويق
+      </label>
+    </div>
+    <% if (isEdit) { %>
+    <div class="col-md-4">
+      <label class="form-label">نقاط الولاء</label>
+      <input type="number" class="form-control" name="loyaltyPoints" min="0" value="<%= customer.loyaltyPoints || 0 %>">
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="form-section">
+  <h3 class="form-section-title"><i class="fa-solid fa-note-sticky me-2 text-primary"></i>ملاحظات</h3>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">ملاحظات عامة</label>
+      <textarea class="form-control" name="notes" rows="4"><%= customer.notes || '' %></textarea>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">ملاحظات طبية</label>
+      <textarea class="form-control" name="medicalNotes" rows="4"><%= customer.medicalNotes || '' %></textarea>
+    </div>
+  </div>
+</div>

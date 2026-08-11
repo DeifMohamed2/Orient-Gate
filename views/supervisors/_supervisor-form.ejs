@@ -1,0 +1,41 @@
+<% const s = supervisor || {}; %>
+<div class="form-section">
+  <h3 class="form-section-title"><i class="fa-solid fa-user-shield me-2 text-primary"></i>بيانات المشرف</h3>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">الاسم <span class="text-danger">*</span></label>
+      <input class="form-control" name="name" value="<%= s.name || '' %>" required placeholder="أ / أحمد أكرم">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">هاتف مصر</label>
+      <input class="form-control" name="phoneEg" value="<%= s.phoneEg || '' %>" placeholder="01xxxxxxxxx">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">هاتف السعودية</label>
+      <input class="form-control" name="phoneSa" value="<%= s.phoneSa || '' %>" placeholder="05xxxxxxxx">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">البريد الإلكتروني</label>
+      <input type="email" class="form-control" name="email" value="<%= s.email || '' %>">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">الرقم القومي</label>
+      <input class="form-control" name="nationalId" value="<%= s.nationalId || '' %>">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">رسوم الرحلة الافتراضية</label>
+      <input type="number" class="form-control" name="defaultTripFee" min="0" step="0.01" value="<%= s.defaultTripFee || 0 %>">
+      <div class="form-text">تُستخدم في المالية لاحقاً</div>
+    </div>
+    <div class="col-md-12">
+      <label class="form-label">ملاحظات</label>
+      <textarea class="form-control" name="notes" rows="3"><%= s.notes || '' %></textarea>
+    </div>
+    <div class="col-md-4">
+      <label class="form-check-label d-block">
+        <input type="checkbox" class="form-check-input me-2" name="isActive" value="true" <%= !s._id || s.isActive ? 'checked' : '' %>>
+        نشط
+      </label>
+    </div>
+  </div>
+</div>
