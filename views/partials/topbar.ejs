@@ -16,12 +16,14 @@
   </button>
 
   <div class="topbar-center">
+    <% if (u && typeof u.hasPermission === 'function' && u.hasPermission('dashboard:view')) { %>
     <div class="search-shell">
       <i class="fa-solid fa-magnifying-glass search-icon"></i>
       <form action="/dashboard/search" method="GET" class="search-form-inner">
         <input type="search" name="search" placeholder="بحث في الحجوزات والعملاء..." autocomplete="off" aria-label="بحث" />
       </form>
     </div>
+    <% } %>
   </div>
 
   <div class="topbar-spacer d-none d-md-block"></div>

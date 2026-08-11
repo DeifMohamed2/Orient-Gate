@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const newBrokerPhoneInput = document.getElementById('newBrokerPhone');
   const primaryCustomerWrap = document.getElementById('primaryCustomerWrap');
   const primaryPhoneWrap = document.getElementById('primaryPhoneWrap');
-  const bookingOfficerInput = document.getElementById('bookingOfficerInput');
   const primaryCustomerIdInput = document.getElementById('primaryCustomerIdInput');
   const vipAddonsEmpty = document.getElementById('vipAddonsEmpty');
   const vipCatalogCards = document.getElementById('vipCatalogCards');
@@ -1274,10 +1273,6 @@ document.addEventListener('DOMContentLoaded', () => {
         primaryCustomerIdInput.value = data.primaryCustomerId;
       }
       if (form.primaryPhone) form.primaryPhone.value = data.primaryPhone || '';
-      if (form.bookingOfficer) {
-        const defaultOfficer = form.dataset.defaultBookingOfficer || bookingOfficerInput?.defaultValue || '';
-        form.bookingOfficer.value = data.bookingOfficer?.trim() || defaultOfficer;
-      }
       if (form.notes) form.notes.value = data.notes || '';
       if (discountInput) discountInput.value = data.discount || '0';
       if (paidInput) paidInput.value = data.paidAmount || '0';
@@ -1390,7 +1385,6 @@ document.addEventListener('DOMContentLoaded', () => {
       primaryCustomerName: form.primaryCustomerName?.value || '',
       primaryCustomerId: primaryCustomerIdInput?.value || '',
       primaryPhone: form.primaryPhone?.value || '',
-      bookingOfficer: form.bookingOfficer?.value || '',
       primaryCustomerUserEdited: primaryCustomerName?.dataset?.userEdited === '1',
       members: [],
       discount: discountInput?.value || '0',

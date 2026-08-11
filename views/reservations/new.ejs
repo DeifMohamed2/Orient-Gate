@@ -5,7 +5,6 @@
 }) %>
 
 <form class="card reservation-form needs-validation" method="POST" action="/reservations" id="reservationForm" novalidate
-  data-default-booking-officer="<%= currentUser.name %>"
   <% if (trip) { %>
     data-trip-start="<%= new Date(trip.startDate).toISOString().split('T')[0] %>"
     data-trip-end="<%= new Date(trip.endDate).toISOString().split('T')[0] %>"
@@ -72,10 +71,6 @@
           <label class="form-label">رقم التليفون <span class="text-danger" id="primaryPhoneRequired">*</span></label>
           <input class="form-control" name="primaryPhone" required placeholder="01xxxxxxxxx" pattern="01[0-9]{9}" inputmode="numeric" value="<%= (prefillCustomer?.phones && prefillCustomer.phones[0]) || '' %>">
           <div class="invalid-feedback">رقم هاتف مصري صالح مطلوب (11 رقم يبدأ بـ 01)</div>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">مسئول الحجز</label>
-          <input class="form-control" name="bookingOfficer" id="bookingOfficerInput" placeholder="اسم مسئول الحجز" value="<%= currentUser.name %>">
         </div>
         <div class="col-md-4">
           <label class="form-label">مسؤول المبيعات</label>

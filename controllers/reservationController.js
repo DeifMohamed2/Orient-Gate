@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Trip = require('../models/Trip');
 const Hotel = require('../models/Hotel');
 const Customer = require('../models/Customer');
+const User = require('../models/User');
 const Reservation = require('../models/Reservation');
 const { createReservation, cancelReservation, parseMemberVipSelections } = require('../services/reservationService');
 const { calculateReservationPricing } = require('../services/pricingService');
@@ -264,9 +265,8 @@ const create = async (req, res, next) => {
       salesEmployeeId = body.salesEmployeeId;
     }
 
-    if (!body.bookingOfficer?.trim()) {
-      body.bookingOfficer = req.user.name;
-    }
+    const salesUser = await User.findById(salesEmployeeId).select('name');
+    body.bookingOfficer = salesUser?.name || req.user.name;
 
     const reservation = await createReservation(trip, body, req.user._id, salesEmployeeId);
 
@@ -356,7 +356,6 @@ const update = async (req, res, next) => {
     const reservation = await Reservation.findById(req.params.id);
     if (!reservation) throw new AppError('الحجز غير موجود', 404);
     reservation.notes = req.body.notes;
-    reservation.bookingOfficer = req.body.bookingOfficer;
     reservation.updatedBy = req.user._id;
     await reservation.save();
     req.flash('success', 'تم تحديث الحجز');
